@@ -4,7 +4,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { DragDropContext, Droppable, Draggable, DropResult} from '@hello-pangea/dnd';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Plus, GripVertical, ExternalLink, Settings, X, LogOut, Save } from 'lucide-react';
 import debounce from 'lodash/debounce';
 import type { Link } from '@/types';
@@ -21,6 +21,32 @@ export default function DashboardPage() {
   const unsavedChangesRef = useRef<boolean>(false);
   const [displayName, setDisplayName] = useState(session?.user?.name || '');
   const [isUpdatingName, setIsUpdatingName] = useState(false);
+
+  // Create a debounced save function with proper type definition
+  const debouncedSaveRef = useRef(
+    debounce(async (linksToSave: Link[]) => {
+      try {
+        setSaveStatus('saving');
+        await Promise.all(
+          linksToSave.map(async (link) => {
+            await fetch(`/api/links/${link.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(link),
+            });
+          })
+        );
+        setSaveStatus('saved');
+        setTimeout(() => {
+          setSaveStatus('idle');
+        }, 2000);
+      } catch (error) {
+        console.error('Error saving changes:', error);
+        setSaveStatus('error');
+        setErrorMessage('Failed to save changes');
+      }
+    }, 1500)
+  );
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -42,45 +68,16 @@ export default function DashboardPage() {
     }
   };
 
-  // Create a debounced save function
-  const debouncedSave = useCallback(
-    debounce(async linksToSave => {
-      try {
-        setSaveStatus('saving');
-        await Promise.all(
-          linksToSave.map(async (link: { id: any }) => {
-            await fetch(`/api/links/${link.id}`, {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(link),
-            });
-          })
-        );
-        setSaveStatus('saved');
-        // Reset to idle after showing "Saved!" for 2 seconds
-        setTimeout(() => {
-          setSaveStatus('idle');
-        }, 2000);
-      } catch (error) {
-        console.error('Error saving changes:', error);
-        setSaveStatus('error');
-        setErrorMessage('Failed to save changes');
-      }
-    }, 1500),
-    []
-  );
-
   // Handle changes to links
   const handleLinksChange = useCallback(
     (newLinks: Link[]) => {
       setLinks(newLinks);
       setSaveStatus('pending');
       unsavedChangesRef.current = true;
-      debouncedSave(newLinks);
+      debouncedSaveRef.current(newLinks);
     },
-    [debouncedSave]
+    [setSaveStatus]
   );
-
   // Save before closing/navigating away
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -197,7 +194,7 @@ export default function DashboardPage() {
   const handleSignOut = async () => {
     // Ensure any pending changes are saved before signing out
     if (unsavedChangesRef.current) {
-      await debouncedSave.flush();
+      await debouncedSaveRef.current.flush();
     }
     await signOut({ callbackUrl: '/' });
   };
@@ -240,10 +237,10 @@ export default function DashboardPage() {
     return () => {
       // Save any pending changes when component unmounts
       if (unsavedChangesRef.current) {
-        debouncedSave.flush();
+        debouncedSaveRef.current.flush();
       }
     };
-  }, [debouncedSave]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#FFCC00]">
