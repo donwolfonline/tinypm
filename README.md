@@ -2,8 +2,6 @@
 
 A beautiful, minimal link-in-bio tool built with Next.js 14, TypeScript, and Tailwind CSS.
 
-Created by [Zach Sims](https://zachsi.ms/)
-
 ## Features
 
 - 🎨 Clean, minimal UI with smooth animations
@@ -173,7 +171,7 @@ While this is a personal project, issues and pull requests are welcome. Please f
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+None, all rights reserved.
 
 ## Acknowledgments
 
@@ -181,4 +179,4 @@ Created by [Zach Sims](https://zachsi.ms/). Built with Next.js, Tailwind CSS, an
 
 ---
 
-© 2024 [Zach Sims](https://zachsi.ms/). All Rights Reserved.
+© TinyPM
