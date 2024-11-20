@@ -1,4 +1,5 @@
 // app/[username]/page.tsx
+import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import prisma from '@/lib/prisma';
 import Image from 'next/image';
@@ -7,7 +8,20 @@ import LinkButton from '../components/LinkButton';
 import EditButton from '../components/EditButton';
 import type { Link as LinkType, User } from '@/types';
 
-async function getUser(username: string) {
+// This helps Next.js understand the page parameters
+export async function generateStaticParams() {
+  return [];
+}
+
+// Type-safe params
+type PageProps = {
+  params: {
+    username: string;
+  };
+  searchParams: { [key: string]: string | string[] | undefined };
+};
+
+async function getUser(username: string): Promise<User> {
   const user = await prisma.user.findUnique({
     where: { username },
     include: {
@@ -19,16 +33,25 @@ async function getUser(username: string) {
   });
 
   if (!user) notFound();
-  return user as User;
+  return user;
 }
 
-// Use the Props type directly in the component
-export default async function UserPage({ params: { username } }: { params: { username: string } }) {
-  const user = await getUser(username);
+// Metadata generation
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const user = await getUser(params.username);
+  return {
+    title: `${user.name || user.username} | tiny.pm`,
+    description: `Check out ${user.name || user.username}'s links on tiny.pm`,
+  };
+}
+
+// Page component
+export default async function UserPage({ params }: PageProps) {
+  const user = await getUser(params.username);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FFCC00] to-[#FFA500] p-8">
-      <EditButton username={username} />
+      <EditButton username={params.username} />
       <div className="mx-auto max-w-2xl">
         {/* Profile Header */}
         <div className="mb-8 text-center">
