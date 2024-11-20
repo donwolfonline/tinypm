@@ -1,36 +1,184 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🦢 tiny.pm
+
+A beautiful, minimal link-in-bio tool built with Next.js 14, TypeScript, and Tailwind CSS.
+
+Created by [Zach Sims](https://zachsi.ms/)
+
+## Features
+
+- 🎨 Clean, minimal UI with smooth animations
+- 🔐 Secure Google OAuth authentication
+- 🔄 Real-time link management with drag-and-drop reordering
+- 📊 Click tracking for links
+- ⚡️ Optimized for speed and performance
+- 🌗 Beautiful design with custom branding
+- 🔍 SEO optimized
+- 📱 Fully responsive design
+
+## Tech Stack
+
+- **Framework**: Next.js 14 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **Database**: PostgreSQL with Prisma ORM
+- **Authentication**: NextAuth.js with Google OAuth
+- **Deployment**: Node.js with PM2
+- **Server**: Caddy (reverse proxy)
+- **Components**: Custom components with shadcn/ui
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18.17 or later
+- PostgreSQL
+- A Google OAuth application for authentication
+
+### Local Development
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/yourusername/tiny-pm.git
+cd tiny-pm
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Create a `.env.local` file:
+```env
+# Database
+DATABASE_URL="postgresql://user:password@localhost:5432/tinypm"
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# NextAuth
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="your-secret-here"
 
-## Learn More
+# Google OAuth
+GOOGLE_CLIENT_ID="your-client-id"
+GOOGLE_CLIENT_SECRET="your-client-secret"
+```
 
-To learn more about Next.js, take a look at the following resources:
+4. Set up the database:
+```bash
+npx prisma generate
+npx prisma db push
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+5. Run the development server:
+```bash
+npm run dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Visit `http://localhost:3000` to see your application.
 
-## Deploy on Vercel
+## Production Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Server Prerequisites
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Node.js 18.17 or later
+- PM2 for process management
+- Caddy web server
+- PostgreSQL
+- Git
+
+### Deployment Steps
+
+1. Set up your server and clone the repository:
+```bash
+mkdir -p /var/www
+cd /var/www
+git clone https://github.com/yourusername/tiny-pm.git
+cd tiny-pm
+```
+
+2. Install global dependencies:
+```bash
+npm install -g pm2
+```
+
+3. Create `.env.production`:
+```env
+# Database
+DATABASE_URL="postgresql://user:password@localhost:5432/tinypm"
+
+# NextAuth
+NEXTAUTH_URL="https://your-domain.com"
+NEXTAUTH_SECRET="your-production-secret"
+
+# Google OAuth
+GOOGLE_CLIENT_ID="your-production-client-id"
+GOOGLE_CLIENT_SECRET="your-production-client-secret"
+```
+
+4. Configure Caddy (example configuration):
+```caddyfile
+your-domain.com {
+    reverse_proxy localhost:3000
+    encode gzip
+}
+```
+
+5. Set up deployment script:
+```bash
+chmod +x deploy.sh
+./deploy.sh
+```
+
+6. Set up PM2 to run on startup:
+```bash
+pm2 startup
+pm2 save
+```
+
+### Updating Production
+
+To update your production deployment:
+
+```bash
+cd /var/www/tiny-pm
+./deploy.sh
+```
+
+## Project Structure
+
+```
+tiny-pm/
+├── app/
+│   ├── api/            # API routes
+│   ├── components/     # React components
+│   ├── types/          # TypeScript types
+│   └── [...]/          # Page routes
+├── prisma/
+│   └── schema.prisma   # Database schema
+├── public/             # Static files
+└── lib/                # Utility functions
+```
+
+## Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection URL |
+| `NEXTAUTH_URL` | Full URL of your site |
+| `NEXTAUTH_SECRET` | Random string for session encryption |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+
+## Contributing
+
+While this is a personal project, issues and pull requests are welcome. Please follow the existing code style and add unit tests for any new or changed functionality.
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+## Acknowledgments
+
+Created by [Zach Sims](https://zachsi.ms/). Built with Next.js, Tailwind CSS, and other amazing open-source projects.
+
+---
+
+© 2024 [Zach Sims](https://zachsi.ms/). All Rights Reserved.
