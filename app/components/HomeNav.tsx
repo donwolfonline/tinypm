@@ -47,12 +47,6 @@ export function HomeNav() {
               <>
                 <Link
                   href="/login"
-                  className="rounded-lg px-4 py-2 text-black transition-colors hover:bg-black hover:text-[#FFCC00]"
-                >
-                  Login
-                </Link>
-                <Link
-                  href="/login"
                   className="rounded-lg bg-black px-4 py-2 text-[#FFCC00] transition-colors hover:bg-gray-900"
                 >
                   Get Started

@@ -21,14 +21,20 @@ export default function Home() {
             digital presence effortlessly.
           </p>
           <div className="flex flex-col justify-center gap-4 sm:flex-row">
-            <button className="group flex items-center justify-center gap-2 rounded-lg bg-black px-8 py-4 text-lg font-medium text-[#FFCC00] transition-colors hover:bg-gray-900">
-              Create Your Page
-              <ArrowRight className="transition-transform group-hover:translate-x-1" />
-            </button>
-            <button className="rounded-lg border-2 border-black bg-[#FFCC00] px-8 py-4 text-lg font-medium text-black transition-colors hover:bg-[#FFD700]">
-              See Examples
-            </button>
-          </div>
+  <Link 
+    href="/login"
+    className="group flex items-center justify-center gap-2 rounded-lg bg-black px-8 py-4 text-lg font-medium text-[#FFCC00] transition-colors hover:bg-gray-900"
+  >
+    Create Your Page
+    <ArrowRight className="transition-transform group-hover:translate-x-1" />
+  </Link>
+  <Link 
+    href="/examples"
+    className="rounded-lg border-2 border-black bg-[#FFCC00] px-8 py-4 text-lg font-medium text-black transition-colors hover:bg-[#FFD700]"
+  >
+    See Examples
+  </Link>
+</div>
         </div>
       </section>
 
@@ -91,101 +97,127 @@ export default function Home() {
           <p className="mb-8 text-xl text-[#FFCC00]/80">
             Join thousands of creators who use tiny.pm to share their social media profiles
           </p>
-          <button className="group mx-auto flex items-center gap-2 rounded-lg bg-[#FFCC00] px-8 py-4 text-lg font-medium text-black transition-colors hover:bg-[#FFD700]">
-            Get Started — It's Free
-            <ArrowRight className="transition-transform group-hover:translate-x-1" />
-          </button>
+          <Link 
+  href="/login"
+  className="group mx-auto inline-flex items-center gap-2 rounded-lg bg-[#FFCC00] px-8 py-4 text-lg font-medium text-black transition-colors hover:bg-[#FFD700]"
+>
+  Get Started — It's Free
+  <ArrowRight className="transition-transform group-hover:translate-x-1" />
+</Link>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t-2 border-black bg-[#FFCC00] py-12 text-black">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
-            <div>
-              <h3 className="mb-4 font-bold">Product</h3>
-              <ul className="space-y-2">
-                <li>
-                  <a href="#" className="hover:underline">
-                    Features
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:underline">
-                    Pricing
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:underline">
-                    Examples
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="mb-4 font-bold">Company</h3>
-              <ul className="space-y-2">
-                <li>
-                  <a href="#" className="hover:underline">
-                    About
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:underline">
-                    Blog
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:underline">
-                    Contact
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="mb-4 font-bold">Legal</h3>
-              <ul className="space-y-2">
-                <li>
-                  <a href="#" className="hover:underline">
-                    Privacy
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:underline">
-                    Terms
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="mb-4 font-bold">Social</h3>
-              <ul className="space-y-2">
-                <li>
-                  <a href="#" className="hover:underline">
-                    Twitter
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:underline">
-                    Instagram
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:underline">
-                    LinkedIn
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </div>
-          <div className="mt-12 border-t-2 border-black pt-8 text-center">
-            <div className="mx-auto mb-4 h-8 w-8">
-            <Image src="/images/goose.svg" alt="TinyPM Logo" width={0} height={0} sizes="100vw" style={{ width: '100%', height: 'auto' }}/>
-            </div>
-            <p>&copy; 2024 tiny.pm. All rights reserved.</p>
-          </div>
-        </div>
-      </footer>
+{/* Footer */}
+{/* Footer */}
+<footer className="border-t-2 border-black bg-[#FFCC00] py-12 text-black">
+  <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div className="grid grid-cols-2 gap-y-8 md:grid-cols-4 md:gap-x-12 md:gap-y-0 text-center">
+      <div className="flex flex-col">
+        <h3 className="mb-4 font-bold">Product</h3>
+        <ul className="flex flex-1 flex-col space-y-2">
+          <li>
+            <Link href="/examples" className="hover:underline">
+              Examples
+            </Link>
+          </li>
+        </ul>
+      </div>
+      <div className="flex flex-col">
+        <h3 className="mb-4 font-bold">Company</h3>
+        <ul className="flex flex-1 flex-col space-y-2">
+          <li>
+            <Link href="/about" className="hover:underline">
+              About
+            </Link>
+          </li>
+          <li>
+            <a 
+              href="https://zachsi.ms" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="hover:underline"
+            >
+              Blog
+            </a>
+          </li>
+          <li>
+            <a 
+              href="mailto:hello@tiny.pm" 
+              className="hover:underline"
+            >
+              Contact
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div className="flex flex-col">
+        <h3 className="mb-4 font-bold">Legal</h3>
+        <ul className="flex flex-1 flex-col space-y-2">
+          <li>
+            <Link href="/privacy" className="hover:underline">
+              Privacy
+            </Link>
+          </li>
+          <li>
+            <Link href="/terms" className="hover:underline">
+              Terms
+            </Link>
+          </li>
+        </ul>
+      </div>
+      <div className="flex flex-col">
+        <h3 className="mb-4 font-bold">Social</h3>
+        <ul className="flex flex-1 flex-col space-y-2">
+          <li>
+            <a 
+              href="https://bsky.app/profile/tiny.pm" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:underline"
+            >
+              BlueSky
+            </a>
+          </li>
+          <li>
+            <a 
+              href="https://github.com/Simsz/metinypm" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:underline"
+            >
+              GitHub
+            </a>
+          </li>
+          <li>
+            <a 
+              href="https://www.linkedin.com/in/zachesims/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:underline"
+            >
+              LinkedIn
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div className="mt-12 border-t-2 border-black pt-8 text-center">
+      <div className="mx-auto mb-4 h-8 w-8">
+        <Image 
+          src="/images/goose.svg" 
+          alt="TinyPM Logo" 
+          width={0} 
+          height={0} 
+          sizes="100vw" 
+          style={{ width: '100%', height: 'auto' }}
+        />
+      </div>
+      <p>&copy; {new Date().getFullYear()} tiny.pm. All rights reserved.</p>
+    </div>
+  </div>
+</footer>
     </main>
   );
 }
+
+

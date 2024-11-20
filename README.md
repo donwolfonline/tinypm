@@ -15,7 +15,7 @@ A beautiful, minimal link-in-bio tool built with Next.js 14, TypeScript, and Tai
 
 ## Tech Stack
 
-- **Framework**: Next.js 14 (App Router)
+- **Framework**: Next.js 15 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
 - **Database**: PostgreSQL with Prisma ORM
