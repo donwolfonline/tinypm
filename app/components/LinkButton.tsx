@@ -1,8 +1,6 @@
 // app/components/LinkButton.tsx
 'use client';
 
-import { useState } from 'react';
-
 interface LinkButtonProps {
   href: string;
   title: string;
