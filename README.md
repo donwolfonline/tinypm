@@ -51,7 +51,7 @@ npm install
 DATABASE_URL="postgresql://user:password@localhost:5432/tinypm"
 
 # NextAuth
-NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_URL="http://localhost:3131"
 NEXTAUTH_SECRET="your-secret-here"
 
 # Google OAuth
@@ -70,7 +70,7 @@ npx prisma db push
 npm run dev
 ```
 
-Visit `http://localhost:3000` to see your application.
+Visit `http://localhost:3131` to see your application.
 
 ## Production Deployment
 
