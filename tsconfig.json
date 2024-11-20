@@ -8,7 +8,7 @@
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
@@ -22,7 +22,7 @@
     "paths": {
       "@/*": ["./*"]
     },
-    "types": ["node", "react", "react-dom", "next", "next/types/global"]
+    "types": ["node"]
   },
   "include": [
     "next-env.d.ts",

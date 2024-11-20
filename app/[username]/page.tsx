@@ -1,4 +1,3 @@
-// app/[username]/page.tsx
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import prisma from '@/lib/prisma';
@@ -8,6 +7,19 @@ import LinkButton from '../components/LinkButton';
 import EditButton from '../components/EditButton';
 import type { Link as LinkType, User } from '@/types';
 
+type PageParams = Promise<{ username: string }>;
+
+// For generateMetadata, we need to await the params
+export async function generateMetadata(props: { 
+  params: PageParams 
+}): Promise<Metadata> {
+  const { username } = await props.params;
+  const user = await getUser(username);
+  return {
+    title: `${user.name || username} | tiny.pm`,
+    description: `Check out ${user.name || username}'s links on tiny.pm`,
+  };
+}
 
 async function getUser(username: string): Promise<User> {
   const user = await prisma.user.findUnique({
@@ -24,11 +36,11 @@ async function getUser(username: string): Promise<User> {
   return user;
 }
 
-// Page component with async params handling
-export default async function UserPage({ 
-  params: { username } 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-}: any) {
+// For the page component, we also await the params
+export default async function UserPage(props: { 
+  params: PageParams 
+}) {
+  const { username } = await props.params;
   const user = await getUser(username);
 
   return (
@@ -79,14 +91,4 @@ export default async function UserPage({
       </div>
     </div>
   );
-}
-
-// Update metadata generator to handle async params
-export async function generateMetadata({ params }: AsyncPageProps): Promise<Metadata> {
-  const { username } = await params;
-  const user = await getUser(username);
-  return {
-    title: `${user.name || username} | tiny.pm`,
-    description: `Check out ${user.name || username}'s links on tiny.pm`,
-  };
 }

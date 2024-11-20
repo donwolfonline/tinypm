@@ -1,23 +1,24 @@
 // app/api/links/[id]/route.ts
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import prisma from '@/lib/prisma';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { getAuthSession } from '@/lib/auth';
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getAuthSession();
 
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Get ID from URL
+    const id = request.url.split('/').pop();
     const data = await request.json();
 
     // Verify the link belongs to the user
     const link = await prisma.link.findFirst({
       where: {
-        id: params.id,
+        id,
         user: {
           email: session.user.email,
         },
@@ -29,7 +30,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }
 
     const updatedLink = await prisma.link.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         title: data.title !== undefined ? data.title : undefined,
         url: data.url !== undefined ? data.url : undefined,
@@ -45,18 +46,21 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getAuthSession();
 
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Get ID from URL
+    const id = request.url.split('/').pop();
+
     // Verify the link belongs to the user
     const link = await prisma.link.findFirst({
       where: {
-        id: params.id,
+        id,
         user: {
           email: session.user.email,
         },
@@ -68,7 +72,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     }
 
     await prisma.link.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true });
