@@ -3,23 +3,23 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 export const metadata = {
-  title: 'Privacy Policy | TinyPM'
+  title: 'Privacy Policy | TinyPM',
 };
 
 export default function PrivacyPage() {
   return (
     <main className="min-h-screen bg-[#FFCC00]">
       <div className="mx-auto max-w-3xl px-4 py-16">
-        <Link 
+        <Link
           href="/"
           className="mb-8 inline-flex items-center gap-2 text-sm text-black/60 hover:text-black"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Home
         </Link>
-        
+
         <h1 className="mb-8 text-4xl font-bold">Privacy Policy</h1>
-        
+
         <div className="space-y-6 rounded-lg border-2 border-black bg-white p-8 text-black/80">
           <section className="space-y-4">
             <h2 className="text-2xl font-bold text-black">Information We Collect</h2>
@@ -46,9 +46,9 @@ export default function PrivacyPage() {
           <section className="space-y-4">
             <h2 className="text-2xl font-bold text-black">Data Security</h2>
             <p>
-              We implement security measures to protect your personal information. However, 
-              no method of transmission over the Internet is 100% secure, and we cannot 
-              guarantee absolute security.
+              We implement security measures to protect your personal information. However, no
+              method of transmission over the Internet is 100% secure, and we cannot guarantee
+              absolute security.
             </p>
           </section>
 
@@ -74,10 +74,11 @@ export default function PrivacyPage() {
           </section>
 
           <p className="text-sm text-black/60">
-            Last updated: {new Date().toLocaleDateString('en-US', { 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
+            Last updated:{' '}
+            {new Date().toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
             })}
           </p>
         </div>

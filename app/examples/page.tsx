@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 export const metadata = {
-  title: 'Examples | TinyPM'
+  title: 'Examples | TinyPM',
 };
 
 const EXAMPLE_PROFILES = [
@@ -35,14 +35,14 @@ export default function ExamplesPage() {
   return (
     <main className="min-h-screen bg-[#FFCC00]">
       <div className="mx-auto max-w-4xl px-4 py-16">
-        <Link 
+        <Link
           href="/"
           className="mb-8 inline-flex items-center gap-2 text-sm text-black/60 hover:text-black"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Home
         </Link>
-        
+
         <div className="mb-12 text-center">
           <h1 className="mb-4 text-4xl font-bold">Example Profiles</h1>
           <p className="text-xl text-black/80">
@@ -51,7 +51,7 @@ export default function ExamplesPage() {
         </div>
 
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {EXAMPLE_PROFILES.map((profile) => (
+          {EXAMPLE_PROFILES.map(profile => (
             <Link
               key={profile.username}
               href={`/${profile.username}`}

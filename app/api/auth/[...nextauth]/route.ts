@@ -11,7 +11,7 @@ export const authOptions: AuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn({ user }) {
       console.log('SignIn callback - user:', user);
       if (!user.email) {
         console.log('No email provided');
@@ -52,7 +52,7 @@ export const authOptions: AuthOptions = {
           const dbUser = await prisma.user.findUnique({
             where: { email: session.user.email },
           });
-          
+
           console.log('Session callback - dbUser:', dbUser);
 
           if (dbUser) {

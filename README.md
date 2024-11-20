@@ -35,17 +35,20 @@ A beautiful, minimal link-in-bio tool built with Next.js 14, TypeScript, and Tai
 ### Local Development
 
 1. Clone the repository:
+
 ```bash
 git clone git@github.com:Simsz/metinypm.git
 cd metinypm
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Create a `.env.local` file:
+
 ```env
 # Database
 DATABASE_URL="postgresql://user:password@localhost:5432/tinypm"
@@ -60,12 +63,14 @@ GOOGLE_CLIENT_SECRET="your-client-secret"
 ```
 
 4. Set up the database:
+
 ```bash
 npx prisma generate
 npx prisma db push
 ```
 
 5. Run the development server:
+
 ```bash
 npm run dev
 ```
@@ -85,6 +90,7 @@ Visit `http://localhost:3131` to see your application.
 ### Deployment Steps
 
 1. Set up your server and clone the repository:
+
 ```bash
 mkdir -p /var/www
 cd /var/www
@@ -93,11 +99,13 @@ cd metinypm
 ```
 
 2. Install global dependencies:
+
 ```bash
 npm install -g pm2
 ```
 
 3. Create `.env.production`:
+
 ```env
 # Database
 DATABASE_URL="postgresql://user:password@localhost:5432/tinypm"
@@ -112,6 +120,7 @@ GOOGLE_CLIENT_SECRET="your-production-client-secret"
 ```
 
 4. Configure Caddy (example configuration):
+
 ```caddyfile
 your-domain.com {
     reverse_proxy localhost:3000
@@ -120,12 +129,14 @@ your-domain.com {
 ```
 
 5. Set up deployment script:
+
 ```bash
 chmod +x deploy.sh
 ./deploy.sh
 ```
 
 6. Set up PM2 to run on startup:
+
 ```bash
 pm2 startup
 pm2 save
@@ -157,13 +168,13 @@ metinypm/
 
 ## Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `DATABASE_URL` | PostgreSQL connection URL |
-| `NEXTAUTH_URL` | Full URL of your site |
-| `NEXTAUTH_SECRET` | Random string for session encryption |
-| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
+| Variable               | Description                          |
+| ---------------------- | ------------------------------------ |
+| `DATABASE_URL`         | PostgreSQL connection URL            |
+| `NEXTAUTH_URL`         | Full URL of your site                |
+| `NEXTAUTH_SECRET`      | Random string for session encryption |
+| `GOOGLE_CLIENT_ID`     | Google OAuth client ID               |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret           |
 
 ## Contributing
 

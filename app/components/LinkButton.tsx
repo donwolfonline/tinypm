@@ -10,11 +10,19 @@ interface LinkButtonProps {
 }
 
 export default function LinkButton({ href, title, id }: LinkButtonProps) {
-  const [isClicked, setIsClicked] = useState(false);
+  // const [isClicked, setIsClicked] = useState(false);
+
+  // const handleClick = async () => {
+  //   try {
+  //     setIsClicked(true);
+  //     await fetch(`/api/links/${id}/click`, { method: 'POST' });
+  //   } catch (error) {
+  //     console.error('Error updating click count:', error);
+  //   }
+  // };
 
   const handleClick = async () => {
     try {
-      setIsClicked(true);
       await fetch(`/api/links/${id}/click`, { method: 'POST' });
     } catch (error) {
       console.error('Error updating click count:', error);

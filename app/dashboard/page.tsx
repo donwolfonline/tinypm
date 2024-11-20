@@ -4,7 +4,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { DragDropContext, Droppable, Draggable, DropResult} from '@hello-pangea/dnd';
 import { Plus, GripVertical, ExternalLink, Settings, X, LogOut, Save } from 'lucide-react';
 import debounce from 'lodash/debounce';
 import type { Link } from '@/types';
@@ -94,7 +94,7 @@ export default function DashboardPage() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
-  const onDragEnd = (result: any) => {
+  const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
     const newLinks = Array.from(links);
@@ -167,21 +167,21 @@ export default function DashboardPage() {
 
   const handleDisplayNameSave = async () => {
     if (isUpdatingName || displayName === session?.user?.name) return;
-    
+
     setIsUpdatingName(true);
     setSaveStatus('saving');
-    
+
     try {
       const response = await fetch('/api/user', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: displayName }),
       });
-  
+
       if (!response.ok) {
         throw new Error('Failed to update display name');
       }
-  
+
       // Update the session
       await updateSession();
       setSaveStatus('saved');

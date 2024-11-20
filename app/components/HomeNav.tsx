@@ -2,23 +2,22 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 export function HomeNav() {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const router = useRouter();
 
   // Optional: Force revalidation of session data
-//   useEffect(() => {
-//     const interval = setInterval(() => {
-//       updateSession();
-//     }, 5000); // Check every 5 seconds
+  //   useEffect(() => {
+  //     const interval = setInterval(() => {
+  //       updateSession();
+  //     }, 5000); // Check every 5 seconds
 
-//     return () => clearInterval(interval);
-//   }, []);
+  //     return () => clearInterval(interval);
+  //   }, []);
 
   return (
     <nav className="fixed z-50 w-full border-b border-black bg-[#FFCC00]">
@@ -26,14 +25,21 @@ export function HomeNav() {
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="h-8 w-8">
-              <Image src="/images/goose.svg" alt="TinyPM Logo" width={0} height={0} sizes="100vw" style={{ width: '100%', height: 'auto' }}/>
+              <Image
+                src="/images/goose.svg"
+                alt="TinyPM Logo"
+                width={0}
+                height={0}
+                sizes="100vw"
+                style={{ width: '100%', height: 'auto' }}
+              />
             </div>
             <span className="text-xl font-bold text-black">tiny.pm</span>
           </div>
           <div className="flex items-center space-x-4">
             {session ? (
               <>
-                <span key={session.user?.name} className="text-black animate-fade-in">
+                <span key={session.user?.name} className="animate-fade-in text-black">
                   Hello, {session.user?.name}
                 </span>
                 <button

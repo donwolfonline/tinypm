@@ -2,6 +2,7 @@
 import { notFound } from 'next/navigation';
 import prisma from '@/lib/prisma';
 import Image from 'next/image';
+import Link from 'next/link';
 import LinkButton from '../components/LinkButton';
 import EditButton from '../components/EditButton';
 
@@ -77,7 +78,7 @@ export default async function UserPage({ params }: { params: { username: string 
 
         {/* Footer */}
         <div className="mt-12 text-center">
-          <a
+          <Link
             href="/"
             className="inline-flex items-center gap-2 text-sm text-black/60 hover:text-black"
           >
@@ -89,7 +90,7 @@ export default async function UserPage({ params }: { params: { username: string 
               className="opacity-60"
             />
             tiny.pm
-          </a>
+          </Link>
         </div>
       </div>
     </div>

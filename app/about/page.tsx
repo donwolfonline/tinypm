@@ -4,21 +4,21 @@ import Image from 'next/image';
 import { ArrowLeft, Github, Twitter } from 'lucide-react';
 
 export const metadata = {
-  title: 'About | TinyPM'
+  title: 'About | TinyPM',
 };
 
 export default function AboutPage() {
   return (
     <main className="min-h-screen bg-[#FFCC00]">
       <div className="mx-auto max-w-3xl px-4 py-16">
-        <Link 
+        <Link
           href="/"
           className="mb-8 inline-flex items-center gap-2 text-sm text-black/60 hover:text-black"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Home
         </Link>
-        
+
         <div className="rounded-lg border-2 border-black bg-white p-8">
           <div className="mb-8 text-center">
             <Image
@@ -38,9 +38,12 @@ export default function AboutPage() {
             <section className="space-y-4">
               <h2 className="text-2xl font-bold">Our Story</h2>
               <p className="text-black/80">
-                TinyPM was created by <a href="https://zachsi.ms" className="text-black underline">Zach Sims</a> as 
-                a minimal, beautiful alternative to existing link-in-bio tools. The goal was to create 
-                something that was both simple to use and visually appealing.
+                TinyPM was created by{' '}
+                <a href="https://zachsi.ms" className="text-black underline">
+                  Zach Sims
+                </a>{' '}
+                as a minimal, beautiful alternative to existing link-in-bio tools. The goal was to
+                create something that was both simple to use and visually appealing.
               </p>
             </section>
 
@@ -58,7 +61,8 @@ export default function AboutPage() {
             <section className="space-y-4">
               <h2 className="text-2xl font-bold">Open Source</h2>
               <p className="text-black/80">
-                TinyPM is built with modern web technologies and is open source. Check out our code and contribute on GitHub.
+                TinyPM is built with modern web technologies and is open source. Check out our code
+                and contribute on GitHub.
               </p>
               <div className="flex gap-4">
                 <a

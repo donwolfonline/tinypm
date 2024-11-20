@@ -29,7 +29,14 @@ export default function LoginPage() {
       <div className="w-full max-w-md rounded-lg border-2 border-black bg-white p-8 shadow-lg">
         {/* Logo */}
         <div className="mx-auto mb-6 h-16 w-16">
-        <Image src="/images/goose.svg" alt="TinyPM Logo" width={0} height={0} sizes="100vw" style={{ width: '100%', height: 'auto' }}/>
+          <Image
+            src="/images/goose.svg"
+            alt="TinyPM Logo"
+            width={0}
+            height={0}
+            sizes="100vw"
+            style={{ width: '100%', height: 'auto' }}
+          />
         </div>
 
         <h2 className="mb-6 text-center text-2xl font-bold">Welcome to tiny.pm</h2>
