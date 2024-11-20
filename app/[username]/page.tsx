@@ -8,11 +8,6 @@ import LinkButton from '../components/LinkButton';
 import EditButton from '../components/EditButton';
 import type { Link as LinkType, User } from '@/types';
 
-// Define an async props type
-type AsyncPageProps = {
-  params: Promise<{ username: string }>;
-  searchParams?: { [key: string]: string | string[] | undefined };
-};
 
 async function getUser(username: string): Promise<User> {
   const user = await prisma.user.findUnique({
@@ -30,9 +25,9 @@ async function getUser(username: string): Promise<User> {
 }
 
 // Page component with async params handling
-export default async function UserPage({ params }: AsyncPageProps) {
-  // Await the params
-  const { username } = await params;
+export default async function UserPage({ 
+  params: { username } 
+}: any) {
   const user = await getUser(username);
 
   return (
