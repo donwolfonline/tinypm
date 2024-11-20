@@ -44,7 +44,12 @@ async function getUser(username: string) {
   return user as User;
 }
 
-export default async function UserPage({ params }: { params: { username: string } }) {
+interface UserPageProps {
+  params: {
+    username: string;
+  };
+}
+export default async function UserPage({ params }: UserPageProps) {
   const user = await getUser(params.username);
 
   return (
