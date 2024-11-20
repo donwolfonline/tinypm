@@ -7,13 +7,6 @@ import LinkButton from '../components/LinkButton';
 import EditButton from '../components/EditButton';
 import type { Link as LinkType, User } from '@/types';
 
-// Remove the PageProps interface and use a simple type for the params
-type Props = {
-  params: {
-    username: string;
-  };
-};
-
 async function getUser(username: string) {
   const user = await prisma.user.findUnique({
     where: { username },
@@ -30,12 +23,12 @@ async function getUser(username: string) {
 }
 
 // Use the Props type directly in the component
-export default async function UserPage({ params }: Props) {
-  const user = await getUser(params.username);
+export default async function UserPage({ params: { username } }: { params: { username: string } }) {
+  const user = await getUser(username);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FFCC00] to-[#FFA500] p-8">
-      <EditButton username={params.username} />
+      <EditButton username={username} />
       <div className="mx-auto max-w-2xl">
         {/* Profile Header */}
         <div className="mb-8 text-center">
