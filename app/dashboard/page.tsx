@@ -48,6 +48,7 @@ export default function DashboardPage() {
       try {
         setSaveStatus('saving');
         await Promise.all(
+          // eslint-disable-next-line no-explicit-any
           linksToSave.map(async (link: { id: any }) => {
             await fetch(`/api/links/${link.id}`, {
               method: 'PATCH',
