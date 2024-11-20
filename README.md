@@ -36,8 +36,8 @@ A beautiful, minimal link-in-bio tool built with Next.js 14, TypeScript, and Tai
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/tiny-pm.git
-cd tiny-pm
+git clone git@github.com:Simsz/metinypm.git
+cd metinypm
 ```
 
 2. Install dependencies:
@@ -88,8 +88,8 @@ Visit `http://localhost:3000` to see your application.
 ```bash
 mkdir -p /var/www
 cd /var/www
-git clone https://github.com/yourusername/tiny-pm.git
-cd tiny-pm
+git clone git@github.com:Simsz/metinypm.git
+cd metinypm
 ```
 
 2. Install global dependencies:
@@ -136,14 +136,14 @@ pm2 save
 To update your production deployment:
 
 ```bash
-cd /var/www/tiny-pm
+cd /var/www/metinypm
 ./deploy.sh
 ```
 
 ## Project Structure
 
 ```
-tiny-pm/
+metinypm/
 ├── app/
 │   ├── api/            # API routes
 │   ├── components/     # React components
