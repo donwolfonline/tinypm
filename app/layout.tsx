@@ -63,6 +63,7 @@ export default function RootLayout({
         <link rel="icon" href="/images/favicon.ico" sizes="any" />
         <link rel="icon" href="/images/goose.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/images/apple-touch-icon.png" />
+        <meta name="theme-color" content="#FFCC00" />
         {/* <link rel="manifest" href="/site.webmanifest" /> */}
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
