@@ -54,16 +54,16 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAvailable || isChecking) return;
-  
+
     try {
       const res = await fetch('/api/username/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username }),
       });
-  
+
       const data = await res.json();
-  
+
       if (data.error) {
         setError(data.error);
       } else {

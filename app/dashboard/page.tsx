@@ -28,7 +28,7 @@ export default function DashboardPage() {
       try {
         setSaveStatus('saving');
         await Promise.all(
-          linksToSave.map(async (link) => {
+          linksToSave.map(async link => {
             await fetch(`/api/links/${link.id}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },

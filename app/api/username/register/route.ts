@@ -7,46 +7,80 @@ import { Filter } from 'bad-words';
 const filter = new Filter();
 
 // Add custom words to the filter's blacklist
-filter.addWords(
-  'scam',
-  'phishing',
-  'warez',
-  'crack',
-  'hack',
-  'leaked',
-  'dump'
-);
+filter.addWords('scam', 'phishing', 'warez', 'crack', 'hack', 'leaked', 'dump');
 
 // Common offensive terms and protected keywords
 const reservedUsernames = new Set([
   // System routes and common endpoints
-  'admin', 'administrator', 'settings', 'login', 'logout', 'signup', 'signin',
-  'register', 'api', 'dashboard', 'profile', 'account', 'help', 'support',
-  'billing', 'payment', 'subscribe', 'mod', 'moderator', 'staff', 'team',
-  
-  // Protected brand terms
-  'official', 'verified', 'support', 'security', 'help', 'info', 'news',
-  'announcement', 'service', 'bot', 'system',
-  
-  // Common impersonation attempts
-  'admin-team', 'mod-team', 'support-team', 'help-desk', 'official-support',
-  'verification', 'verify', 'authenticated',
+  'admin',
+  'administrator',
+  'settings',
+  'login',
+  'logout',
+  'signup',
+  'signin',
+  'register',
+  'api',
+  'dashboard',
+  'profile',
+  'account',
+  'help',
+  'support',
+  'billing',
+  'payment',
+  'subscribe',
+  'mod',
+  'moderator',
+  'staff',
+  'team',
 
-  'tinypm', 'tiny_pm', 'tiny-pm', 'tiny', 'tiny_', 'pm_', '_pm', '_tiny'
+  // Protected brand terms
+  'official',
+  'verified',
+  'support',
+  'security',
+  'help',
+  'info',
+  'news',
+  'announcement',
+  'service',
+  'bot',
+  'system',
+
+  // Common impersonation attempts
+  'admin-team',
+  'mod-team',
+  'support-team',
+  'help-desk',
+  'official-support',
+  'verification',
+  'verify',
+  'authenticated',
+
+  'tinypm',
+  'tiny_pm',
+  'tiny-pm',
+  'tiny',
+  'tiny_',
+  'pm_',
+  '_pm',
+  '_tiny',
 ]);
 
 // Additional validation rules
 const containsOffensiveContent = (username: string): boolean => {
   const normalized = username.toLowerCase();
-  
+
   // Use bad-words filter
   if (filter.isProfane(normalized)) {
     return true;
   }
-  
+
   // Check for common impersonation patterns
-  if (normalized.match(/(official|real|true|actual)_.+/i) ||
-      normalized.match(/.+_(official|support|team)/i)) {
+  if (
+    normalized.match(/(official|real|true|actual)_.+/i) ||
+    normalized.match(/.+_(official|support|team)/i)
+  ) {
     return true;
   }
 

@@ -10,9 +10,7 @@ import type { Link as LinkType, User } from '@/types';
 type PageParams = Promise<{ username: string }>;
 
 // For generateMetadata, we need to await the params
-export async function generateMetadata(props: { 
-  params: PageParams 
-}): Promise<Metadata> {
+export async function generateMetadata(props: { params: PageParams }): Promise<Metadata> {
   const { username } = await props.params;
   const user = await getUser(username);
   return {
@@ -37,9 +35,7 @@ async function getUser(username: string): Promise<User> {
 }
 
 // For the page component, we also await the params
-export default async function UserPage(props: { 
-  params: PageParams 
-}) {
+export default async function UserPage(props: { params: PageParams }) {
   const { username } = await props.params;
   const user = await getUser(username);
 
