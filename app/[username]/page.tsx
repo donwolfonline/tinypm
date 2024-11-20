@@ -27,6 +27,7 @@ async function getUser(username: string): Promise<User> {
 // Page component with async params handling
 export default async function UserPage({ 
   params: { username } 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }: any) {
   const user = await getUser(username);
 
