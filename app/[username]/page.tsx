@@ -8,17 +8,10 @@ import LinkButton from '../components/LinkButton';
 import EditButton from '../components/EditButton';
 import type { Link as LinkType, User } from '@/types';
 
-// This helps Next.js understand the page parameters
-export async function generateStaticParams() {
-  return [];
-}
-
-// Type-safe params
-type PageProps = {
-  params: {
-    username: string;
-  };
-  searchParams: { [key: string]: string | string[] | undefined };
+// Define an async props type
+type AsyncPageProps = {
+  params: Promise<{ username: string }>;
+  searchParams?: { [key: string]: string | string[] | undefined };
 };
 
 async function getUser(username: string): Promise<User> {
@@ -36,22 +29,15 @@ async function getUser(username: string): Promise<User> {
   return user;
 }
 
-// Metadata generation
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const user = await getUser(params.username);
-  return {
-    title: `${user.name || user.username} | tiny.pm`,
-    description: `Check out ${user.name || user.username}'s links on tiny.pm`,
-  };
-}
-
-// Page component
-export default async function UserPage({ params }: PageProps) {
-  const user = await getUser(params.username);
+// Page component with async params handling
+export default async function UserPage({ params }: AsyncPageProps) {
+  // Await the params
+  const { username } = await params;
+  const user = await getUser(username);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FFCC00] to-[#FFA500] p-8">
-      <EditButton username={params.username} />
+      <EditButton username={username} />
       <div className="mx-auto max-w-2xl">
         {/* Profile Header */}
         <div className="mb-8 text-center">
@@ -97,4 +83,14 @@ export default async function UserPage({ params }: PageProps) {
       </div>
     </div>
   );
+}
+
+// Update metadata generator to handle async params
+export async function generateMetadata({ params }: AsyncPageProps): Promise<Metadata> {
+  const { username } = await params;
+  const user = await getUser(username);
+  return {
+    title: `${user.name || username} | tiny.pm`,
+    description: `Check out ${user.name || username}'s links on tiny.pm`,
+  };
 }
