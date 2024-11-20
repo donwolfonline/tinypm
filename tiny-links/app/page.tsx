@@ -180,12 +180,7 @@ export default function Home() {
           </div>
           <div className="mt-12 border-t-2 border-black pt-8 text-center">
             <div className="mx-auto mb-4 h-8 w-8">
-              <svg viewBox="0 0 100 100" className="h-full w-full">
-                <path
-                  d="M35.5 70.5c-3-15-2-27.5 4.5-34.5 6-6.5 14-8.5 19-8.5 8.5 0 15 3.5 18.5 7.5 4 4.5 5.5 10 5.5 14 0 6.5-3 11.5-6.5 15-4 4-9 6.5-13 7.5-2.5.5-5.5 1-9 1-7 0-13.5-1-19-2z"
-                  fill="black"
-                />
-              </svg>
+            <Image src="/images/goose.svg" alt="TinyPM Logo" width={0} height={0} sizes="100vw" style={{ width: '100%', height: 'auto' }}/>
             </div>
             <p>&copy; 2024 tiny.pm. All rights reserved.</p>
           </div>
