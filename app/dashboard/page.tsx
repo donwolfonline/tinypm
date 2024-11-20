@@ -234,10 +234,11 @@ export default function DashboardPage() {
 
   // Cleanup effect for unsaved changes
   useEffect(() => {
+    const currentDebouncedSave = debouncedSaveRef.current;
     return () => {
-      // Save any pending changes when component unmounts
+      // Use the stored reference in cleanup
       if (unsavedChangesRef.current) {
-        debouncedSaveRef.current.flush();
+        currentDebouncedSave.flush();
       }
     };
   }, []);
