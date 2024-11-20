@@ -16,11 +16,11 @@ const EXAMPLE_PROFILES = [
     bio: 'Developer, designer, and creator of TinyPM',
   },
   {
-    username: 'sarah',
-    name: 'Sarah Chen',
-    role: 'Food Blogger',
-    image: '/images/goose.svg',
-    bio: 'Sharing delicious recipes and food photography',
+    username: 'sharky',
+    name: 'Peter Pylko',
+    role: 'Gamer',
+    image: '/images/sharky.jpeg',
+    bio: 'Gaming + Streaming and just having fun :)',
   },
   {
     username: 'alex',
