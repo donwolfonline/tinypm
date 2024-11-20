@@ -44,12 +44,7 @@ async function getUser(username: string) {
   return user as User;
 }
 
-interface UserPageProps {
-  params: {
-    username: string;
-  };
-}
-export default async function UserPage({ params }: UserPageProps) {
+export default async function UserPage({ params }: { params: { username: string } }) {
   const user = await getUser(params.username);
 
   return (
@@ -83,20 +78,20 @@ export default async function UserPage({ params }: UserPageProps) {
 
         {/* Footer */}
         <div className="mt-12 text-center">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-sm text-black/60 hover:text-black"
-          >
-            <Image
-              src="/images/goose.svg"
-              alt="TinyPM"
-              width={16}
-              height={16}
-              className="opacity-60"
-            />
-            tiny.pm
-          </Link>
-        </div>
+  <Link
+    href="/"
+    className="inline-flex items-center gap-2 text-sm text-black/60 hover:text-black"
+  >
+    <Image
+      src="/images/goose.svg"
+      alt="TinyPM"
+      width={16}
+      height={16}
+      className="opacity-60"
+    />
+    tiny.pm
+  </Link>
+</div>
       </div>
     </div>
   );
