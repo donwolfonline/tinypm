@@ -1,25 +1,84 @@
 'use client';
 
 import { useSession, signOut } from 'next-auth/react';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { Plus, GripVertical, ExternalLink, Settings, X, LogOut } from 'lucide-react';
+import { Plus, GripVertical, ExternalLink, Settings, X, LogOut, Save } from 'lucide-react';
+import debounce from 'lodash/debounce';
 
 interface SocialLink {
   id: string;
   title: string;
   url: string;
   enabled: boolean;
+  order: number;
 }
 
 export default function DashboardPage() {
-  const { data: session } = useSession();
-  const [links, setLinks] = useState<SocialLink[]>([
-    { id: '1', title: 'Instagram', url: 'https://instagram.com', enabled: true },
-    { id: '2', title: 'Twitter', url: 'https://twitter.com', enabled: true },
-  ]);
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [links, setLinks] = useState<SocialLink[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaveTime, setLastSaveTime] = useState(0);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    } else if (session?.user?.id) {
+      fetchLinks();
+    }
+  }, [status, session, router]);
+
+  const fetchLinks = async () => {
+    try {
+      const response = await fetch('/api/links');
+      const data = await response.json();
+      if (data.links) {
+        setLinks(data.links);
+      }
+    } catch (error) {
+      console.error('Error fetching links:', error);
+    }
+  };
+
+  const saveChanges = async () => {
+    const now = Date.now();
+    if (isSaving || now - lastSaveTime < 1000) return; // Prevent saving more than once per second
+
+    setIsSaving(true);
+    try {
+      // Save all modified links
+      await Promise.all(
+        links.map(async (link) => {
+          await fetch(`/api/links/${link.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(link),
+          });
+        })
+      );
+      setLastSaveTime(now);
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error('Error saving changes:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Debounced save function
+  const debouncedSave = useCallback(
+    debounce(() => {
+      if (hasUnsavedChanges) {
+        saveChanges();
+      }
+    }, 2000),
+    [hasUnsavedChanges, links]
+  );
 
   const onDragEnd = (result: any) => {
     if (!result.destination) return;
@@ -28,27 +87,54 @@ export default function DashboardPage() {
     const [movedItem] = newLinks.splice(result.source.index, 1);
     newLinks.splice(result.destination.index, 0, movedItem);
 
-    setLinks(newLinks);
+    // Update order for all affected links
+    const updatedLinks = newLinks.map((link, index) => ({
+      ...link,
+      order: index,
+    }));
+
+    setLinks(updatedLinks);
+    setHasUnsavedChanges(true);
   };
 
-  const addNewLink = () => {
-    const newLink = {
-      id: `link-${Date.now()}`,
-      title: '',
-      url: '',
-      enabled: true
-    };
-    setLinks([...links, newLink]);
+  const addNewLink = async () => {
+    try {
+      const response = await fetch('/api/links', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: '',
+          url: '',
+          enabled: true,
+          order: links.length,
+        }),
+      });
+      const newLink = await response.json();
+      setLinks([...links, newLink]);
+    } catch (error) {
+      console.error('Error adding new link:', error);
+    }
   };
 
   const updateLink = (id: string, field: keyof SocialLink, value: string | boolean) => {
-    setLinks(links.map(link => 
+    const updatedLinks = links.map(link =>
       link.id === id ? { ...link, [field]: value } : link
-    ));
+    );
+    setLinks(updatedLinks);
+    setHasUnsavedChanges(true);
+    debouncedSave();
   };
 
-  const deleteLink = (id: string) => {
-    setLinks(links.filter(link => link.id !== id));
+  const deleteLink = async (id: string) => {
+    try {
+      await fetch(`/api/links/${id}`, {
+        method: 'DELETE',
+      });
+      setLinks(links.filter(link => link.id !== id));
+      setHasUnsavedChanges(true);
+    } catch (error) {
+      console.error('Error deleting link:', error);
+    }
   };
 
   const handleSignOut = async () => {
@@ -61,7 +147,7 @@ export default function DashboardPage() {
       <nav className="fixed top-0 z-50 w-full border-b border-black bg-[#FFCC00]">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
           <div className="flex items-center gap-2">
-          <Image src="/images/goose.svg" alt="TinyPM Logo" width={64} height={64} />
+            <Image src="/images/goose.svg" alt="TinyPM Logo" width={64} height={64} />
             <span className="text-xl font-bold">tiny.pm</span>
           </div>
           <button 
@@ -81,10 +167,13 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2">
               <span className="text-sm">🔥 Your page is live at:</span>
               <code className="rounded bg-black/5 px-2 py-1 text-sm">
-                tiny.pm/{session?.user?.name}
+                tiny.pm/{session?.user?.username}
               </code>
             </div>
-            <button className="flex items-center gap-1 rounded-lg bg-black px-3 py-1.5 text-sm text-[#FFCC00]">
+            <button 
+              onClick={() => router.push(`/${session?.user?.username}`)}
+              className="flex items-center gap-1 rounded-lg bg-black px-3 py-1.5 text-sm text-[#FFCC00]"
+            >
               <ExternalLink className="h-4 w-4" />
               View Page
             </button>
@@ -166,6 +255,18 @@ export default function DashboardPage() {
             Add Link
           </button>
         </div>
+
+        {/* Save Changes Button */}
+        {hasUnsavedChanges && (
+          <button
+            onClick={saveChanges}
+            disabled={isSaving}
+            className="fixed bottom-4 right-4 flex items-center gap-2 rounded-lg bg-black px-4 py-2 text-[#FFCC00] shadow-lg transition-colors hover:bg-gray-900 disabled:opacity-50"
+          >
+            <Save className="h-4 w-4" />
+            {isSaving ? 'Saving...' : 'Save Changes'}
+          </button>
+        )}
       </main>
 
       {/* Settings Panel */}

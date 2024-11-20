@@ -1,9 +1,9 @@
+// app/login/page.tsx
 'use client';
 
 import { signIn, signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import Image from 'next/image';
 
 export default function LoginPage() {
   const { data: session, status } = useSession();
@@ -11,16 +11,29 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (session) {
-      router.push('/dashboard');
+      if (session.user?.username) {
+        router.push('/dashboard');
+      } else {
+        router.push('/register');
+      }
     }
   }, [session, router]);
+
+  const handleSignOut = async () => {
+    await signOut({ callbackUrl: '/login' });
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#FFCC00]">
       <div className="w-full max-w-md rounded-lg border-2 border-black bg-white p-8 shadow-lg">
         {/* Logo */}
         <div className="mx-auto mb-6 h-16 w-16">
-        <Image src="/images/goose.svg" alt="TinyPM Logo" width={0} height={0} sizes="100vw" style={{ width: '100%', height: 'auto' }}/>
+          <svg viewBox="0 0 100 100" className="h-full w-full">
+            <path
+              d="M35.5 70.5c-3-15-2-27.5 4.5-34.5 6-6.5 14-8.5 19-8.5 8.5 0 15 3.5 18.5 7.5 4 4.5 5.5 10 5.5 14 0 6.5-3 11.5-6.5 15-4 4-9 6.5-13 7.5-2.5.5-5.5 1-9 1-7 0-13.5-1-19-2z"
+              fill="black"
+            />
+          </svg>
         </div>
 
         <h2 className="mb-6 text-center text-2xl font-bold">Welcome to tiny.pm</h2>
@@ -30,12 +43,20 @@ export default function LoginPage() {
         ) : session ? (
           <div className="space-y-4">
             <p className="text-center">Signed in as {session.user?.email}</p>
-            <button
-              onClick={() => signOut()}
-              className="w-full rounded-lg bg-black px-4 py-2 text-[#FFCC00] transition-colors hover:bg-gray-900"
-            >
-              Sign Out
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => router.push('/register')}
+                className="w-full rounded-lg bg-black px-4 py-2 text-[#FFCC00] transition-colors hover:bg-gray-900"
+              >
+                Continue Setup
+              </button>
+              <button
+                onClick={handleSignOut}
+                className="w-full rounded-lg border border-black px-4 py-2 text-black transition-colors hover:bg-gray-100"
+              >
+                Not you? Sign Out
+              </button>
+            </div>
           </div>
         ) : (
           <button
