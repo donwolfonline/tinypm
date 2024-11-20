@@ -5,28 +5,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 import LinkButton from '../components/LinkButton';
 import EditButton from '../components/EditButton';
+import type { Link as LinkType, User } from '@/types';
 
-// Add this interface to define the Link type
-interface Link {
-  id: string;
-  title: string;
-  url: string;
-  enabled: boolean;
-  order: number;
-  clicks: number;
-  userId: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-// Add interface for User with links
-interface User {
-  id: string;
-  name: string | null;
-  email: string | null;
-  image: string | null;
-  username: string | null;
-  links: Link[];
+interface PageProps {
+  params: { username: string };
+  searchParams?: { [key: string]: string | string[] | undefined };
 }
 
 async function getUser(username: string) {
@@ -44,7 +27,8 @@ async function getUser(username: string) {
   return user as User;
 }
 
-export default async function UserPage({ params }: { params: { username: string } }) {
+
+export default async function UserPage({ params }: PageProps) {
   const user = await getUser(params.username);
 
   return (
@@ -71,27 +55,27 @@ export default async function UserPage({ params }: { params: { username: string 
 
         {/* Links */}
         <div className="space-y-4">
-          {user.links.map((link: Link) => (
+          {user.links.map((link: LinkType) => (
             <LinkButton key={link.id} id={link.id} href={link.url} title={link.title} />
           ))}
         </div>
 
         {/* Footer */}
         <div className="mt-12 text-center">
-  <Link
-    href="/"
-    className="inline-flex items-center gap-2 text-sm text-black/60 hover:text-black"
-  >
-    <Image
-      src="/images/goose.svg"
-      alt="TinyPM"
-      width={16}
-      height={16}
-      className="opacity-60"
-    />
-    tiny.pm
-  </Link>
-</div>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm text-black/60 hover:text-black"
+          >
+            <Image
+              src="/images/goose.svg"
+              alt="TinyPM"
+              width={16}
+              height={16}
+              className="opacity-60"
+            />
+            tiny.pm
+          </Link>
+        </div>
       </div>
     </div>
   );
