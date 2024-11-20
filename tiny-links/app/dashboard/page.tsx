@@ -1,29 +1,26 @@
 'use client';
 
 import { useSession, signOut } from 'next-auth/react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Plus, GripVertical, ExternalLink, Settings, X, LogOut, Save } from 'lucide-react';
 import debounce from 'lodash/debounce';
+import type { Link } from '@/types';
 
-interface SocialLink {
-  id: string;
-  title: string;
-  url: string;
-  enabled: boolean;
-  order: number;
-}
+type SaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
 
 export default function DashboardPage() {
-  const { data: session, status } = useSession();
+  const { data: session, update: updateSession, status } = useSession();
   const router = useRouter();
-  const [links, setLinks] = useState<SocialLink[]>([]);
+  const [links, setLinks] = useState<Link[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [lastSaveTime, setLastSaveTime] = useState(0);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const unsavedChangesRef = useRef<boolean>(false);
+  const [displayName, setDisplayName] = useState(session?.user?.name || '');
+  const [isUpdatingName, setIsUpdatingName] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -45,40 +42,57 @@ export default function DashboardPage() {
     }
   };
 
-  const saveChanges = async () => {
-    const now = Date.now();
-    if (isSaving || now - lastSaveTime < 1000) return; // Prevent saving more than once per second
-
-    setIsSaving(true);
-    try {
-      // Save all modified links
-      await Promise.all(
-        links.map(async (link) => {
-          await fetch(`/api/links/${link.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(link),
-          });
-        })
-      );
-      setLastSaveTime(now);
-      setHasUnsavedChanges(false);
-    } catch (error) {
-      console.error('Error saving changes:', error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // Debounced save function
+  // Create a debounced save function
   const debouncedSave = useCallback(
-    debounce(() => {
-      if (hasUnsavedChanges) {
-        saveChanges();
+    debounce(async linksToSave => {
+      try {
+        setSaveStatus('saving');
+        await Promise.all(
+          linksToSave.map(async (link: { id: any }) => {
+            await fetch(`/api/links/${link.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(link),
+            });
+          })
+        );
+        setSaveStatus('saved');
+        // Reset to idle after showing "Saved!" for 2 seconds
+        setTimeout(() => {
+          setSaveStatus('idle');
+        }, 2000);
+      } catch (error) {
+        console.error('Error saving changes:', error);
+        setSaveStatus('error');
+        setErrorMessage('Failed to save changes');
       }
-    }, 2000),
-    [hasUnsavedChanges, links]
+    }, 1500),
+    []
   );
+
+  // Handle changes to links
+  const handleLinksChange = useCallback(
+    (newLinks: Link[]) => {
+      setLinks(newLinks);
+      setSaveStatus('pending');
+      unsavedChangesRef.current = true;
+      debouncedSave(newLinks);
+    },
+    [debouncedSave]
+  );
+
+  // Save before closing/navigating away
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (unsavedChangesRef.current) {
+        e.preventDefault();
+        return (e.returnValue = 'You have unsaved changes. Are you sure you want to leave?');
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
 
   const onDragEnd = (result: any) => {
     if (!result.destination) return;
@@ -93,15 +107,18 @@ export default function DashboardPage() {
       order: index,
     }));
 
-    setLinks(updatedLinks);
-    setHasUnsavedChanges(true);
+    handleLinksChange(updatedLinks);
   };
 
   const addNewLink = async () => {
     try {
+      console.log('Adding new link...');
       const response = await fetch('/api/links', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
         body: JSON.stringify({
           title: '',
           url: '',
@@ -109,20 +126,26 @@ export default function DashboardPage() {
           order: links.length,
         }),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        throw new Error(`Failed to add link: ${response.statusText}`);
+      }
+
       const newLink = await response.json();
-      setLinks([...links, newLink]);
+      console.log('New link created:', newLink);
+      handleLinksChange([...links, newLink]);
     } catch (error) {
       console.error('Error adding new link:', error);
+      setSaveStatus('error');
+      setErrorMessage('Failed to add new link');
     }
   };
 
-  const updateLink = (id: string, field: keyof SocialLink, value: string | boolean) => {
-    const updatedLinks = links.map(link =>
-      link.id === id ? { ...link, [field]: value } : link
-    );
-    setLinks(updatedLinks);
-    setHasUnsavedChanges(true);
-    debouncedSave();
+  const updateLink = (id: string, field: keyof Link, value: string | boolean) => {
+    const updatedLinks = links.map(link => (link.id === id ? { ...link, [field]: value } : link));
+    handleLinksChange(updatedLinks);
   };
 
   const deleteLink = async (id: string) => {
@@ -130,16 +153,97 @@ export default function DashboardPage() {
       await fetch(`/api/links/${id}`, {
         method: 'DELETE',
       });
-      setLinks(links.filter(link => link.id !== id));
-      setHasUnsavedChanges(true);
+      handleLinksChange(links.filter(link => link.id !== id));
     } catch (error) {
       console.error('Error deleting link:', error);
+      setSaveStatus('error');
+      setErrorMessage('Failed to delete link');
+    }
+  };
+
+  const handleDisplayNameChange = async (newName: string) => {
+    setDisplayName(newName);
+  };
+
+  const handleDisplayNameSave = async () => {
+    if (isUpdatingName || displayName === session?.user?.name) return;
+    
+    setIsUpdatingName(true);
+    setSaveStatus('saving');
+    
+    try {
+      const response = await fetch('/api/user', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: displayName }),
+      });
+  
+      if (!response.ok) {
+        throw new Error('Failed to update display name');
+      }
+  
+      // Update the session
+      await updateSession();
+      setSaveStatus('saved');
+    } catch (error) {
+      console.error('Error updating display name:', error);
+      setSaveStatus('error');
+      setErrorMessage('Failed to update display name');
+    } finally {
+      setIsUpdatingName(false);
     }
   };
 
   const handleSignOut = async () => {
+    // Ensure any pending changes are saved before signing out
+    if (unsavedChangesRef.current) {
+      await debouncedSave.flush();
+    }
     await signOut({ callbackUrl: '/' });
   };
+
+  // Add this component for the save status indicator
+  const SaveStatusIndicator = () => {
+    if (saveStatus === 'idle') return null;
+
+    const statusStyles = {
+      pending: 'bg-yellow-500',
+      saving: 'bg-blue-500',
+      saved: 'bg-green-500',
+      error: 'bg-red-500',
+    };
+
+    const statusMessages = {
+      pending: 'Changes pending...',
+      saving: 'Saving...',
+      saved: 'Saved!',
+      error: errorMessage || 'Error saving',
+    };
+
+    return (
+      <div
+        className={`fixed bottom-4 right-4 flex items-center gap-2 rounded-lg px-4 py-2 text-white shadow-lg transition-all duration-200 ${statusStyles[saveStatus]}`}
+      >
+        {saveStatus === 'saving' && (
+          <div className="animate-spin">
+            <Save className="h-4 w-4" />
+          </div>
+        )}
+        {saveStatus === 'saved' && <Save className="h-4 w-4" />}
+        <span>{statusMessages[saveStatus]}</span>
+      </div>
+    );
+  };
+
+  // Cleanup effect for unsaved changes
+  useEffect(() => {
+    return () => {
+      // Save any pending changes when component unmounts
+      if (unsavedChangesRef.current) {
+        debouncedSave.flush();
+      }
+    };
+  }, [debouncedSave]);
 
   return (
     <div className="min-h-screen bg-[#FFCC00]">
@@ -150,7 +254,7 @@ export default function DashboardPage() {
             <Image src="/images/goose.svg" alt="TinyPM Logo" width={64} height={64} />
             <span className="text-xl font-bold">tiny.pm</span>
           </div>
-          <button 
+          <button
             onClick={() => setIsSettingsOpen(true)}
             className="rounded-lg p-2 hover:bg-black/10"
           >
@@ -170,7 +274,7 @@ export default function DashboardPage() {
                 tiny.pm/{session?.user?.username}
               </code>
             </div>
-            <button 
+            <button
               onClick={() => router.push(`/${session?.user?.username}`)}
               className="flex items-center gap-1 rounded-lg bg-black px-3 py-1.5 text-sm text-[#FFCC00]"
             >
@@ -183,15 +287,11 @@ export default function DashboardPage() {
         {/* Links Section */}
         <div className="rounded-xl border-2 border-black bg-white p-6 shadow-lg">
           <h2 className="mb-6 text-xl font-bold">Your Links</h2>
-          
+
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="links">
-              {(provided) => (
-                <div
-                  {...provided.droppableProps}
-                  ref={provided.innerRef}
-                  className="space-y-3"
-                >
+              {provided => (
+                <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
                   {links.map((link, index) => (
                     <Draggable key={link.id} draggableId={link.id} index={index}>
                       {(provided, snapshot) => (
@@ -209,19 +309,19 @@ export default function DashboardPage() {
                             <input
                               type="text"
                               value={link.title}
-                              onChange={(e) => updateLink(link.id, 'title', e.target.value)}
+                              onChange={e => updateLink(link.id, 'title', e.target.value)}
                               className="w-full rounded border-none bg-transparent px-2 py-1 text-sm focus:ring-2 focus:ring-black"
                               placeholder="Link Title"
                             />
                             <input
                               type="url"
                               value={link.url}
-                              onChange={(e) => updateLink(link.id, 'url', e.target.value)}
+                              onChange={e => updateLink(link.id, 'url', e.target.value)}
                               className="w-full rounded border-none bg-transparent px-2 py-1 text-sm text-gray-500 focus:ring-2 focus:ring-black"
                               placeholder="https://"
                             />
                           </div>
-                          <button 
+                          <button
                             onClick={() => deleteLink(link.id)}
                             className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"
                           >
@@ -247,7 +347,7 @@ export default function DashboardPage() {
           </DragDropContext>
 
           {/* Add Link Button */}
-          <button 
+          <button
             onClick={addNewLink}
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-black/20 px-4 py-3 text-black/60 transition-colors hover:border-black hover:text-black"
           >
@@ -255,18 +355,6 @@ export default function DashboardPage() {
             Add Link
           </button>
         </div>
-
-        {/* Save Changes Button */}
-        {hasUnsavedChanges && (
-          <button
-            onClick={saveChanges}
-            disabled={isSaving}
-            className="fixed bottom-4 right-4 flex items-center gap-2 rounded-lg bg-black px-4 py-2 text-[#FFCC00] shadow-lg transition-colors hover:bg-gray-900 disabled:opacity-50"
-          >
-            <Save className="h-4 w-4" />
-            {isSaving ? 'Saving...' : 'Save Changes'}
-          </button>
-        )}
       </main>
 
       {/* Settings Panel */}
@@ -276,14 +364,14 @@ export default function DashboardPage() {
             <div className="flex h-full flex-col">
               <div className="flex items-center justify-between border-b border-gray-200 pb-4">
                 <h2 className="text-xl font-bold">Settings</h2>
-                <button 
+                <button
                   onClick={() => setIsSettingsOpen(false)}
                   className="rounded-lg p-2 hover:bg-gray-100"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              
+
               <div className="flex-1 space-y-6 overflow-y-auto py-6">
                 {/* User Info */}
                 <div className="mb-6 flex items-center gap-3 rounded-lg bg-gray-50 p-4">
@@ -298,18 +386,22 @@ export default function DashboardPage() {
 
                 <div>
                   <h3 className="mb-2 font-medium">Display Name</h3>
-                  <input
-                    type="text"
-                    value={session?.user?.name || ''}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2"
-                    placeholder="Your display name"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={displayName}
+                      onChange={e => handleDisplayNameChange(e.target.value)}
+                      onBlur={handleDisplayNameSave}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2"
+                      placeholder="Your display name"
+                    />
+                  </div>
                 </div>
-                
+
                 <div>
                   <h3 className="mb-2 font-medium">Theme</h3>
                   <div className="grid grid-cols-3 gap-2">
-                    {['Default', 'Dark', 'Light'].map((theme) => (
+                    {['Default', 'Dark', 'Light'].map(theme => (
                       <button
                         key={theme}
                         className="rounded-lg border border-gray-200 px-3 py-2 hover:bg-gray-50"
@@ -325,7 +417,7 @@ export default function DashboardPage() {
                   <button className="mb-3 w-full rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-red-600 hover:bg-red-100">
                     Delete Account
                   </button>
-                  
+
                   <button
                     onClick={handleSignOut}
                     className="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-gray-700 hover:bg-gray-200"
@@ -339,6 +431,7 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+      <SaveStatusIndicator />
     </div>
   );
 }

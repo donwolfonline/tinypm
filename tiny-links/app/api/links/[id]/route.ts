@@ -4,24 +4,23 @@ import { getServerSession } from 'next-auth';
 import prisma from '@/lib/prisma';
 import { authOptions } from '../../auth/[...nextauth]/route';
 
-// Update a link
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const data = await request.json();
-    
+
     // Verify the link belongs to the user
     const link = await prisma.link.findFirst({
       where: {
         id: params.id,
-        userId: session.user.id,
+        user: {
+          email: session.user.email,
+        },
       },
     });
 
@@ -31,7 +30,12 @@ export async function PATCH(
 
     const updatedLink = await prisma.link.update({
       where: { id: params.id },
-      data,
+      data: {
+        title: data.title !== undefined ? data.title : undefined,
+        url: data.url !== undefined ? data.url : undefined,
+        enabled: data.enabled !== undefined ? data.enabled : undefined,
+        order: data.order !== undefined ? data.order : undefined,
+      },
     });
 
     return NextResponse.json(updatedLink);
@@ -41,14 +45,11 @@ export async function PATCH(
   }
 }
 
-// Delete a link
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -56,7 +57,9 @@ export async function DELETE(
     const link = await prisma.link.findFirst({
       where: {
         id: params.id,
-        userId: session.user.id,
+        user: {
+          email: session.user.email,
+        },
       },
     });
 

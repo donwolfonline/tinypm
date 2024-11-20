@@ -1,37 +1,13 @@
 import { Rocket, Link as LucideLink, Share2, ArrowRight } from 'lucide-react';
-import Link from 'next/link'; 
+import Link from 'next/link';
 import Image from 'next/image';
+import { HomeNav } from './components/HomeNav';
 
 export default function Home() {
   return (
     <main className="min-h-screen">
       {/* Navigation */}
-      <nav className="fixed z-50 w-full border-b border-black bg-[#FFCC00]">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8">
-              <Image src="/images/goose.svg" alt="TinyPM Logo" width={0} height={0} sizes="100vw" style={{ width: '100%', height: 'auto' }}/>
-              </div>
-              <span className="text-xl font-bold text-black">tiny.pm</span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link
-                href="/login"
-                className="rounded-lg px-4 py-2 text-black transition-colors hover:bg-black hover:text-[#FFCC00]"
-              >
-                Login
-              </Link>
-              <Link
-                href="/login"
-                className="rounded-lg bg-black px-4 py-2 text-[#FFCC00] transition-colors hover:bg-gray-900"
-              >
-                Get Started
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <HomeNav />
 
       {/* Hero Section */}
       <section className="bg-[#FFCC00] px-4 pb-24 pt-32">

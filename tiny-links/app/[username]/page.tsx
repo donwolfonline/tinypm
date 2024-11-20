@@ -1,24 +1,31 @@
-import { notFound } from 'next/navigation'
-import prisma from '@/lib/prisma' // Update the import path based on your file structure
-import Image from 'next/image'
+// app/[username]/page.tsx
+import { notFound } from 'next/navigation';
+import prisma from '@/lib/prisma';
+import Image from 'next/image';
+import LinkButton from '../components/LinkButton';
+import EditButton from '../components/EditButton';
 
-// Define the Link type
-type Link = {
-  id: string
-  title: string
-  url: string
-  enabled: boolean
-  order: number
+// Add this interface to define the Link type
+interface Link {
+  id: string;
+  title: string;
+  url: string;
+  enabled: boolean;
+  order: number;
+  clicks: number;
+  userId: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-// Define the User type
-type User = {
-  id: string
-  name: string | null
-  email: string | null
-  image: string | null
-  username: string | null
-  links: Link[]
+// Add interface for User with links
+interface User {
+  id: string;
+  name: string | null;
+  email: string | null;
+  image: string | null;
+  username: string | null;
+  links: Link[];
 }
 
 async function getUser(username: string) {
@@ -30,21 +37,18 @@ async function getUser(username: string) {
         orderBy: { order: 'asc' },
       },
     },
-  })
+  });
 
-  if (!user) notFound()
-  return user as User
+  if (!user) notFound();
+  return user as User;
 }
 
 export default async function UserPage({ params }: { params: { username: string } }) {
-  const user = await getUser(params.username)
-
-  const handleLinkClick = async (linkId: string) => {
-    await fetch(`/api/links/${linkId}/click`, { method: 'POST' })
-  }
+  const user = await getUser(params.username);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FFCC00] to-[#FFA500] p-8">
+      <EditButton username={params.username} />
       <div className="mx-auto max-w-2xl">
         {/* Profile Header */}
         <div className="mb-8 text-center">
@@ -66,17 +70,8 @@ export default async function UserPage({ params }: { params: { username: string 
 
         {/* Links */}
         <div className="space-y-4">
-          {user.links.map((link) => (
-            <a
-              key={link.id}
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => handleLinkClick(link.id)}
-              className="block rounded-lg border-2 border-black bg-white p-4 text-center text-lg font-medium shadow-md transition-transform hover:-translate-y-0.5 hover:shadow-lg"
-            >
-              {link.title}
-            </a>
+          {user.links.map((link: Link) => (
+            <LinkButton key={link.id} id={link.id} href={link.url} title={link.title} />
           ))}
         </div>
 
@@ -86,17 +81,17 @@ export default async function UserPage({ params }: { params: { username: string 
             href="/"
             className="inline-flex items-center gap-2 text-sm text-black/60 hover:text-black"
           >
-            <Image 
-              src="/images/TinyPM.svg" 
-              alt="TinyPM" 
-              width={16} 
-              height={16} 
-              className="opacity-60" 
+            <Image
+              src="/images/goose.svg"
+              alt="TinyPM"
+              width={16}
+              height={16}
+              className="opacity-60"
             />
             tiny.pm
           </a>
         </div>
       </div>
     </div>
-  )
+  );
 }

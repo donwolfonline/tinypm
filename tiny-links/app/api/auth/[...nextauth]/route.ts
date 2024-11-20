@@ -46,31 +46,38 @@ export const authOptions: AuthOptions = {
     },
     async session({ session, token }) {
       console.log('Session callback - token:', token);
-      if (session.user) {
+      if (session.user?.email) {
         try {
+          // Always fetch fresh user data from database
           const dbUser = await prisma.user.findUnique({
-            where: { email: session.user.email! },
+            where: { email: session.user.email },
           });
           
           console.log('Session callback - dbUser:', dbUser);
 
-          return {
-            ...session,
-            user: {
-              ...session.user,
-              id: dbUser?.id,
-              username: dbUser?.username,
-            },
-          };
+          if (dbUser) {
+            // Return fresh user data
+            return {
+              ...session,
+              user: {
+                ...session.user,
+                id: dbUser.id,
+                name: dbUser.name, // Include fresh name
+                username: dbUser.username,
+              },
+            };
+          }
         } catch (error) {
           console.error('Error in session callback:', error);
-          return session;
         }
       }
       return session;
     },
     async jwt({ token, user }) {
       console.log('JWT callback - token:', token, 'user:', user);
+      if (user) {
+        token.id = user.id;
+      }
       return token;
     },
   },

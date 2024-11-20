@@ -54,18 +54,16 @@ export default function UsernameSetup() {
     <div className="min-h-screen bg-[#FFCC00] p-8">
       <div className="mx-auto max-w-md rounded-xl border-2 border-black bg-white p-8 shadow-lg">
         <h1 className="mb-6 text-center text-2xl font-bold">Choose your username</h1>
-        
+
         <form onSubmit={handleUsernameSubmit} className="space-y-4">
           <div>
-            <label className="mb-2 block text-sm font-medium">
-              Your tiny.pm URL
-            </label>
+            <label className="mb-2 block text-sm font-medium">Your tiny.pm URL</label>
             <div className="flex items-center rounded-lg border border-gray-200">
               <span className="px-3 text-gray-500">tiny.pm/</span>
               <input
                 type="text"
                 value={username}
-                onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                onChange={e => setUsername(e.target.value.toLowerCase())}
                 className="flex-1 rounded-r-lg border-0 py-2 focus:ring-2 focus:ring-black"
                 placeholder="username"
                 required
@@ -73,9 +71,7 @@ export default function UsernameSetup() {
             </div>
           </div>
 
-          {error && (
-            <p className="text-sm text-red-600">{error}</p>
-          )}
+          {error && <p className="text-sm text-red-600">{error}</p>}
 
           <button
             type="submit"

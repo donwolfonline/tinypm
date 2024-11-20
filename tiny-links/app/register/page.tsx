@@ -25,16 +25,16 @@ export default function Register() {
     if (username.length < 3) return;
     setIsChecking(true);
     setError('');
-    
+
     try {
       const res = await fetch('/api/username', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username }),
       });
-      
+
       const data = await res.json();
-      
+
       if (data.error) {
         setError(data.error);
         setIsAvailable(false);
@@ -109,14 +109,14 @@ export default function Register() {
         </div>
 
         <h2 className="mb-6 text-center text-2xl font-bold">Choose your username</h2>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <div className="relative">
               <input
                 type="text"
                 value={username}
-                onChange={(e) => {
+                onChange={e => {
                   setUsername(e.target.value.toLowerCase());
                   setIsAvailable(false);
                 }}
@@ -130,18 +130,20 @@ export default function Register() {
               <div className="absolute right-3 top-3">
                 {isChecking ? (
                   <span className="text-gray-400">Checking...</span>
-                ) : username.length >= 3 && (
-                  isAvailable ? (
+                ) : (
+                  username.length >= 3 &&
+                  (isAvailable ? (
                     <span className="text-green-600">✓ Available</span>
                   ) : (
                     error && <span className="text-red-600">✗</span>
-                  )
+                  ))
                 )}
               </div>
             </div>
             {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
             <p className="mt-2 text-sm text-gray-600">
-              Username must be 3-20 characters long and can only contain letters, numbers, underscores, and hyphens.
+              Username must be 3-20 characters long and can only contain letters, numbers,
+              underscores, and hyphens.
             </p>
           </div>
 

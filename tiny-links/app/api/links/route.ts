@@ -4,16 +4,20 @@ import { getServerSession } from 'next-auth';
 import prisma from '@/lib/prisma';
 import { authOptions } from '../auth/[...nextauth]/route';
 
-// Get all links for the current user
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const links = await prisma.link.findMany({
-      where: { userId: session.user.id },
+      where: {
+        user: {
+          email: session.user.email,
+        },
+      },
       orderBy: { order: 'asc' },
     });
 
@@ -24,23 +28,32 @@ export async function GET() {
   }
 }
 
-// Create a new link
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Get the user
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
     const data = await request.json();
-    
+
     const link = await prisma.link.create({
       data: {
-        title: data.title,
-        url: data.url,
-        enabled: data.enabled,
-        order: data.order,
-        userId: session.user.id,
+        title: data.title || '',
+        url: data.url || '',
+        enabled: data.enabled ?? true,
+        order: data.order ?? 0,
+        userId: user.id,
       },
     });
 
