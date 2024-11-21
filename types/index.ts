@@ -40,6 +40,10 @@ export const Themes = {
   BLUE: 'BLUE',
   GREEN: 'GREEN',
   PURPLE: 'PURPLE',
+  DARK: 'DARK',
+  DAISY: 'DAISY',
+  ROSE: 'ROSE',
+  SLATE: 'SLATE',
 } as const;
 
 export type Theme = (typeof Themes)[keyof typeof Themes];

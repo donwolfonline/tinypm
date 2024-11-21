@@ -13,6 +13,10 @@ enum Theme {
   BLUE      // #60A5FA to #2563EB
   GREEN     // #34D399 to #059669
   PURPLE    // #A855F7 to #6D28D9
+  DARK      // #1F2937 to #1F2937
+  DAISY     // #FDFBF7 to #FFF9E5
+  ROSE      // #FDF2F8 to #FBCFE8
+  SLATE     // #475569 to #334155
 }
 
 model Account {

@@ -336,9 +336,6 @@ export default function DashboardPage() {
     };
   }, []);
 
-  console.log('Current theme:', currentTheme);
-  console.log('Session theme:', session?.user?.theme);
-
   return (
     <>
       {(isLoading || isTransitioning) && (

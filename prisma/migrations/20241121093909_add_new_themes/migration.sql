@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "Theme" AS ENUM ('YELLOW', 'BLUE', 'GREEN', 'PURPLE');
+CREATE TYPE "Theme" AS ENUM ('YELLOW', 'BLUE', 'GREEN', 'PURPLE', 'DARK', 'DAISY', 'ROSE', 'SLATE');
 
 -- CreateTable
 CREATE TABLE "Account" (
@@ -38,6 +38,8 @@ CREATE TABLE "User" (
     "image" TEXT,
     "username" TEXT,
     "theme" "Theme" NOT NULL DEFAULT 'YELLOW',
+    "pageTitle" TEXT,
+    "pageDesc" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
