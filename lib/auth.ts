@@ -12,7 +12,7 @@ export const authOptions: AuthOptions = {
   ],
   callbacks: {
     async signIn({ user }) {
-      console.log('SignIn callback - user:', user);
+      //console.log('SignIn callback - user:', user);
       if (!user.email) {
         console.log('No email provided');
         return false;
@@ -44,8 +44,8 @@ export const authOptions: AuthOptions = {
         return false;
       }
     },
-    async session({ session, token }) {
-      console.log('Session callback - token:', token);
+    async session({ session }) {
+      //console.log('Session callback - token:', token);
       if (session.user?.email) {
         try {
           // Always fetch fresh user data from database
@@ -53,7 +53,7 @@ export const authOptions: AuthOptions = {
             where: { email: session.user.email },
           });
 
-          console.log('Session callback - dbUser:', dbUser);
+          //console.log('Session callback - dbUser:', dbUser);
 
           if (dbUser) {
             // Return fresh user data
@@ -74,7 +74,7 @@ export const authOptions: AuthOptions = {
       return session;
     },
     async jwt({ token, user }) {
-      console.log('JWT callback - token:', token, 'user:', user);
+      //console.log('JWT callback - token:', token, 'user:', user);
       if (user) {
         token.id = user.id;
       }

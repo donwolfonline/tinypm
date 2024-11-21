@@ -1,7 +1,37 @@
 // app/api/user/route.ts
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import prisma from '@/lib/prisma';
 import { getAuthSession } from '@/lib/auth';
+
+export async function GET() {
+  try {
+    const session = await getAuthSession();
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(user);
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    return NextResponse.json(
+      {
+        error: 'Failed to fetch user',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
+  }
+}
 
 export async function PATCH(request: Request) {
   try {
@@ -12,21 +42,45 @@ export async function PATCH(request: Request) {
     }
 
     const data = await request.json();
+    const updateData: Record<string, unknown> = {};
 
-    if (!data.name?.trim()) {
-      return NextResponse.json({ error: 'Name cannot be empty' }, { status: 400 });
+    if (data.name !== undefined) {
+      if (!data.name?.trim()) {
+        return NextResponse.json({ error: 'Name cannot be empty' }, { status: 400 });
+      }
+      updateData.name = data.name.trim();
+    }
+
+    if (data.theme !== undefined) {
+      updateData.theme = data.theme;
+    }
+
+    // Add handling for new metadata fields
+    if (data.pageTitle !== undefined) {
+      updateData.pageTitle = data.pageTitle.trim() || null;
+    }
+
+    if (data.pageDesc !== undefined) {
+      updateData.pageDesc = data.pageDesc.trim() || null;
     }
 
     const updatedUser = await prisma.user.update({
       where: { email: session.user.email },
-      data: {
-        name: data.name.trim(),
-      },
+      data: updateData,
     });
+
+    // Revalidate the user's profile page cache
+    revalidateTag(`user-${updatedUser.username}`);
 
     return NextResponse.json(updatedUser);
   } catch (error) {
-    console.error('Error updating user:', error);
-    return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
+    console.error('Error in user update:', error);
+    return NextResponse.json(
+      {
+        error: 'Failed to update user',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
+      { status: 500 }
+    );
   }
 }

@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getAuthSession } from '@/lib/auth';
+import { revalidateTag } from 'next/cache';
 
 export async function PATCH(request: Request) {
   try {
@@ -11,17 +12,18 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get ID from URL
     const id = request.url.split('/').pop();
     const data = await request.json();
 
-    // Verify the link belongs to the user
     const link = await prisma.link.findFirst({
       where: {
         id,
         user: {
           email: session.user.email,
         },
+      },
+      include: {
+        user: true, // Include user to get username for cache invalidation
       },
     });
 
@@ -39,6 +41,9 @@ export async function PATCH(request: Request) {
       },
     });
 
+    // Revalidate the user's profile page cache
+    revalidateTag(`user-${link.user.username}`);
+
     return NextResponse.json(updatedLink);
   } catch (error) {
     console.error('Error updating link:', error);
@@ -54,16 +59,17 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get ID from URL
     const id = request.url.split('/').pop();
 
-    // Verify the link belongs to the user
     const link = await prisma.link.findFirst({
       where: {
         id,
         user: {
           email: session.user.email,
         },
+      },
+      include: {
+        user: true, // Include user to get username for cache invalidation
       },
     });
 
@@ -74,6 +80,9 @@ export async function DELETE(request: Request) {
     await prisma.link.delete({
       where: { id },
     });
+
+    // Revalidate the user's profile page cache
+    revalidateTag(`user-${link.user.username}`);
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -1,3 +1,4 @@
+// app/[username]/page.tsx
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import prisma from '@/lib/prisma';
@@ -5,31 +6,52 @@ import Image from 'next/image';
 import Link from 'next/link';
 import LinkButton from '../components/LinkButton';
 import EditButton from '../components/EditButton';
+import { themes, getThemeStyles } from '@/lib/themes';
 import type { Link as LinkType, User } from '@/types';
+import { unstable_cache } from 'next/cache';
 
 type PageParams = Promise<{ username: string }>;
 
-// For generateMetadata, we need to await the params
 export async function generateMetadata(props: { params: PageParams }): Promise<Metadata> {
   const { username } = await props.params;
   const user = await getUser(username);
   return {
-    title: `${user.name || username} | tiny.pm`,
-    description: `Check out ${user.name || username}'s links on tiny.pm`,
+    title: user.pageTitle || `${user.name || username} | tiny.pm`,
+    description: user.pageDesc || `Check out ${user.name || username}'s links on tiny.pm`,
+    openGraph: {
+      title: user.pageTitle || `${user.name || username} | tiny.pm`,
+      description: user.pageDesc || `Check out ${user.name || username}'s links on tiny.pm`,
+    },
+    twitter: {
+      title: user.pageTitle || `${user.name || username} | tiny.pm`,
+      description: user.pageDesc || `Check out ${user.name || username}'s links on tiny.pm`,
+    },
   };
 }
 
-async function getUser(username: string): Promise<User> {
-  const user = await prisma.user.findUnique({
-    where: { username },
-    include: {
-      links: {
-        where: { enabled: true },
-        orderBy: { order: 'asc' },
-      },
+const getCachedUser = (username: string) =>
+  unstable_cache(
+    async () => {
+      const user = await prisma.user.findUnique({
+        where: { username },
+        include: {
+          links: {
+            where: { enabled: true },
+            orderBy: { order: 'asc' },
+          },
+        },
+      });
+      return user;
     },
-  });
+    [`user-${username}`], // Cache key includes username
+    {
+      revalidate: 60, // Cache for 60 seconds
+      tags: [`user-${username}`], // Tag for cache invalidation
+    }
+  )();
 
+async function getUser(username: string): Promise<User> {
+  const user = await getCachedUser(username);
   if (!user) notFound();
   return user;
 }
@@ -38,10 +60,12 @@ async function getUser(username: string): Promise<User> {
 export default async function UserPage(props: { params: PageParams }) {
   const { username } = await props.params;
   const user = await getUser(username);
+  const userTheme = user.theme || 'YELLOW';
+  const themeConfig = themes[userTheme];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#FFCC00] to-[#FFA500] p-8">
-      <EditButton username={username} />
+    <div className="min-h-screen p-8" style={getThemeStyles(userTheme)}>
+      <EditButton username={username} theme={userTheme} />
       <div className="mx-auto max-w-2xl">
         {/* Profile Header */}
         <div className="mb-8 text-center">
@@ -51,20 +75,29 @@ export default async function UserPage(props: { params: PageParams }) {
               alt={user.name || ''}
               width={80}
               height={80}
-              className="mx-auto mb-4 rounded-full"
+              className="mx-auto mb-4 rounded-full border-2 shadow-lg"
+              style={{ borderColor: themeConfig.buttonBg === 'bg-white' ? 'white' : 'black' }}
             />
           ) : (
-            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-black text-2xl text-[#FFCC00]">
+            <div
+              className={`mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full border-2 text-xl font-bold shadow-lg ${themeConfig.buttonBg} ${themeConfig.buttonText} ${themeConfig.buttonBorder}`}
+            >
               {user.name?.[0]?.toUpperCase() || '?'}
             </div>
           )}
-          <h1 className="mb-2 text-2xl font-bold text-black">{user.name}</h1>
+          <h1 className={`mb-2 text-2xl font-bold ${themeConfig.text}`}>{user.name}</h1>
         </div>
 
         {/* Links */}
         <div className="space-y-4">
           {user.links.map((link: LinkType) => (
-            <LinkButton key={link.id} id={link.id} href={link.url} title={link.title} />
+            <LinkButton
+              key={link.id}
+              id={link.id}
+              href={link.url}
+              title={link.title}
+              theme={userTheme}
+            />
           ))}
         </div>
 
@@ -72,14 +105,14 @@ export default async function UserPage(props: { params: PageParams }) {
         <div className="mt-12 text-center">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-sm text-black/60 hover:text-black"
+            className={`inline-flex items-center gap-2 text-sm transition-colors duration-200 ${themeConfig.subtext} hover:${themeConfig.text}`}
           >
             <Image
               src="/images/goose.svg"
               alt="TinyPM"
               width={16}
               height={16}
-              className="opacity-60"
+              className={`${themeConfig.text} opacity-60 transition-opacity duration-200 hover:opacity-100`}
             />
             tiny.pm
           </Link>

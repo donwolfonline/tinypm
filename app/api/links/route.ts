@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getAuthSession } from '@/lib/auth';
+import { revalidateTag } from 'next/cache';
 
 export async function GET() {
   try {
@@ -35,7 +36,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get the user
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
     });
@@ -55,6 +55,9 @@ export async function POST(request: Request) {
         userId: user.id,
       },
     });
+
+    // Revalidate the user's profile page cache
+    revalidateTag(`user-${user.username}`);
 
     return NextResponse.json(link);
   } catch (error) {

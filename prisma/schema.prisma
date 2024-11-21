@@ -8,6 +8,13 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum Theme {
+  YELLOW    // #FFCC00 to #FFA500 (Default)
+  BLUE      // #60A5FA to #2563EB
+  GREEN     // #34D399 to #059669
+  PURPLE    // #A855F7 to #6D28D9
+}
+
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -42,6 +49,9 @@ model User {
   emailVerified DateTime?
   image         String?
   username      String?   @unique
+  theme         Theme     @default(YELLOW)
+  pageTitle     String?   // Custom page title
+  pageDesc      String?   // Custom page description
   accounts      Account[]
   sessions      Session[]
   links         Link[]

@@ -1,47 +1,40 @@
-// app/components/LinkButton.tsx
+// components/LinkButton.tsx
 'use client';
 
-interface LinkButtonProps {
+import { useState } from 'react';
+import { themes } from '@/lib/themes';
+import type { Theme } from '@/types';
+
+type Props = {
+  id: string;
   href: string;
   title: string;
-  id: string;
-}
+  theme: Theme;
+};
 
-export default function LinkButton({ href, title, id }: LinkButtonProps) {
-  // const [isClicked, setIsClicked] = useState(false);
-
-  // const handleClick = async () => {
-  //   try {
-  //     setIsClicked(true);
-  //     await fetch(`/api/links/${id}/click`, { method: 'POST' });
-  //   } catch (error) {
-  //     console.error('Error updating click count:', error);
-  //   }
-  // };
+export default function LinkButton({ id, href, title, theme }: Props) {
+  const [isHovered, setIsHovered] = useState(false);
+  const themeConfig = themes[theme];
 
   const handleClick = async () => {
     try {
       await fetch(`/api/links/${id}/click`, { method: 'POST' });
     } catch (error) {
-      console.error('Error updating click count:', error);
+      console.error('Error tracking click:', error);
     }
-  };
-
-  // Add URL processing
-  const processUrl = (url: string) => {
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      return `https://${url}`;
-    }
-    return url;
   };
 
   return (
     <a
-      href={processUrl(href)}
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       onClick={handleClick}
-      className="block rounded-lg border-2 border-black bg-white p-4 text-center text-lg font-medium shadow-md transition-transform hover:-translate-y-0.5 hover:shadow-lg"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={`block w-full rounded-lg border-2 ${themeConfig.buttonBorder} ${themeConfig.buttonBg} p-4 text-center font-medium ${themeConfig.buttonText} transition-transform ${themeConfig.buttonHover} ${
+        isHovered ? 'scale-[1.02]' : ''
+      }`}
     >
       {title}
     </a>

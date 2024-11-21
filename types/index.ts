@@ -1,4 +1,5 @@
 // types/index.ts
+
 export interface Link {
   id: string;
   title: string;
@@ -17,7 +18,10 @@ export interface User {
   email: string | null;
   image: string | null;
   username: string | null;
+  theme?: Theme | null;
   links: Link[];
+  pageTitle?: string | null;
+  pageDesc?: string | null;
 }
 
 export interface Session {
@@ -27,5 +31,15 @@ export interface Session {
     email?: string | null;
     image?: string | null;
     username?: string | null;
+    theme?: Theme | null;
   };
 }
+
+export const Themes = {
+  YELLOW: 'YELLOW',
+  BLUE: 'BLUE',
+  GREEN: 'GREEN',
+  PURPLE: 'PURPLE',
+} as const;
+
+export type Theme = (typeof Themes)[keyof typeof Themes];
