@@ -74,10 +74,7 @@ export async function PATCH(request: Request) {
           new URL(trimmedImage);
           updateData.image = trimmedImage;
         } catch (e) {
-          return NextResponse.json(
-            { error: 'Invalid image URL format' },
-            { status: 400 }
-          );
+          return NextResponse.json({ error: 'Invalid image URL format' }, { status: 400 });
         }
       }
     }

@@ -16,87 +16,87 @@ interface PendingChanges {
 }
 
 interface SettingsPanelProps {
-    isOpen: boolean;
-    onClose: () => void;
-    session: Session | null;
-    currentTheme: Theme;
-    setCurrentTheme: (theme: Theme) => void;
-    displayName: string;
-    onDisplayNameChange: (name: string) => void;
-    onSignOut: () => void;
-    pageTitle: string;
-    pageDesc: string;
-    onPageTitleChange: (title: string) => void;
-    onPageDescChange: (desc: string) => void;
-    displayPicture: string;  // Add this
-    onDisplayPictureChange: (image: string) => void;  // Add this
-    updateSession: () => Promise<Session | null>;
-    setSaveStatus: (status: 'idle' | 'pending' | 'saving' | 'saved' | 'error') => void;
-    setErrorMessage: (message: string) => void;
-  }
+  isOpen: boolean;
+  onClose: () => void;
+  session: Session | null;
+  currentTheme: Theme;
+  setCurrentTheme: (theme: Theme) => void;
+  displayName: string;
+  onDisplayNameChange: (name: string) => void;
+  onSignOut: () => void;
+  pageTitle: string;
+  pageDesc: string;
+  onPageTitleChange: (title: string) => void;
+  onPageDescChange: (desc: string) => void;
+  displayPicture: string; // Add this
+  onDisplayPictureChange: (image: string) => void; // Add this
+  updateSession: () => Promise<Session | null>;
+  setSaveStatus: (status: 'idle' | 'pending' | 'saving' | 'saved' | 'error') => void;
+  setErrorMessage: (message: string) => void;
+}
 
-  export function SettingsPanel({
-    isOpen,
-    onClose,
-    session,
-    currentTheme,
-    setCurrentTheme,
-    displayName,
-    onDisplayNameChange,
-    onSignOut,
-    pageTitle,
-    pageDesc,
-    onPageTitleChange,
-    onPageDescChange,
-    displayPicture,  // Add this
-    onDisplayPictureChange,  // Add this
-    updateSession,
-    setSaveStatus,
-    setErrorMessage,
-  }: SettingsPanelProps) {
-    const themeConfig = themes[currentTheme];
-    const [pendingChanges, setPendingChanges] = useState<PendingChanges>({});
-    const [localTheme, setLocalTheme] = useState(currentTheme);
-    const [localTitle, setLocalTitle] = useState(pageTitle || '');
-    const [localDesc, setLocalDesc] = useState(pageDesc || '');
-    const [localName, setLocalName] = useState(displayName);
-    const [localImage, setLocalImage] = useState(displayPicture || '');
-    const [imageError, setImageError] = useState(false);
-  
-    // Update local stateother fields
-    useEffect(() => {
-        setLocalTitle(pageTitle || '');
-        setLocalDesc(pageDesc || '');
-        setLocalName(displayName);
-        setLocalImage(displayPicture || '');
-      }, [pageTitle, pageDesc, displayName, displayPicture]);
-    
-      const handleLocalChange = (field: keyof PendingChanges, value: string) => {
-        // For image field, empty string is valid (will be converted to null in API)
-        if (field === 'image' || value.trim() || field === 'pageTitle' || field === 'pageDesc') {
-          setPendingChanges(prev => ({ ...prev, [field]: value }));
-        }
-        
-        switch (field) {
-          case 'pageTitle':
-            setLocalTitle(value);
-            onPageTitleChange(value);
-            break;
-          case 'pageDesc':
-            setLocalDesc(value);
-            onPageDescChange(value);
-            break;
-          case 'name':
-            setLocalName(value);
-            onDisplayNameChange(value);
-            break;
-          case 'image':
-            setLocalImage(value);
-            onDisplayPictureChange(value);
-            setImageError(false);
-            break;
-        }
-      };
+export function SettingsPanel({
+  isOpen,
+  onClose,
+  session,
+  currentTheme,
+  setCurrentTheme,
+  displayName,
+  onDisplayNameChange,
+  onSignOut,
+  pageTitle,
+  pageDesc,
+  onPageTitleChange,
+  onPageDescChange,
+  displayPicture, // Add this
+  onDisplayPictureChange, // Add this
+  updateSession,
+  setSaveStatus,
+  setErrorMessage,
+}: SettingsPanelProps) {
+  const themeConfig = themes[currentTheme];
+  const [pendingChanges, setPendingChanges] = useState<PendingChanges>({});
+  const [localTheme, setLocalTheme] = useState(currentTheme);
+  const [localTitle, setLocalTitle] = useState(pageTitle || '');
+  const [localDesc, setLocalDesc] = useState(pageDesc || '');
+  const [localName, setLocalName] = useState(displayName);
+  const [localImage, setLocalImage] = useState(displayPicture || '');
+  const [imageError, setImageError] = useState(false);
+
+  // Update local stateother fields
+  useEffect(() => {
+    setLocalTitle(pageTitle || '');
+    setLocalDesc(pageDesc || '');
+    setLocalName(displayName);
+    setLocalImage(displayPicture || '');
+  }, [pageTitle, pageDesc, displayName, displayPicture]);
+
+  const handleLocalChange = (field: keyof PendingChanges, value: string) => {
+    // For image field, empty string is valid (will be converted to null in API)
+    if (field === 'image' || value.trim() || field === 'pageTitle' || field === 'pageDesc') {
+      setPendingChanges(prev => ({ ...prev, [field]: value }));
+    }
+
+    switch (field) {
+      case 'pageTitle':
+        setLocalTitle(value);
+        onPageTitleChange(value);
+        break;
+      case 'pageDesc':
+        setLocalDesc(value);
+        onPageDescChange(value);
+        break;
+      case 'name':
+        setLocalName(value);
+        onDisplayNameChange(value);
+        break;
+      case 'image':
+        setLocalImage(value);
+        onDisplayPictureChange(value);
+        setImageError(false);
+        break;
+    }
+  };
 
   const saveChanges = async () => {
     if (Object.keys(pendingChanges).length > 0) {
@@ -123,40 +123,39 @@ interface SettingsPanelProps {
     }
   };
 
-  
-    const handleClose = () => {
-      onClose();
-      if (Object.keys(pendingChanges).length > 0) {
-        saveChanges();
+  const handleClose = () => {
+    onClose();
+    if (Object.keys(pendingChanges).length > 0) {
+      saveChanges();
+    }
+  };
+
+  // Handle theme changes separately since they're immediate
+  const handleLocalThemeChange = async (theme: Theme) => {
+    setLocalTheme(theme);
+    setCurrentTheme(theme);
+    setPendingChanges(prev => ({ ...prev, theme }));
+
+    try {
+      setSaveStatus('saving');
+      const response = await fetch('/api/user', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save theme');
       }
-    };
-  
-    // Handle theme changes separately since they're immediate
-    const handleLocalThemeChange = async (theme: Theme) => {
-      setLocalTheme(theme);
-      setCurrentTheme(theme);
-      setPendingChanges(prev => ({ ...prev, theme }));
-  
-      try {
-        setSaveStatus('saving');
-        const response = await fetch('/api/user', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ theme }),
-        });
-  
-        if (!response.ok) {
-          throw new Error('Failed to save theme');
-        }
-  
-        await updateSession();
-        setSaveStatus('saved');
-      } catch (error) {
-        console.error('Error saving theme:', error);
-        setSaveStatus('error');
-        setErrorMessage('Failed to save theme');
-      }
-    };
+
+      await updateSession();
+      setSaveStatus('saved');
+    } catch (error) {
+      console.error('Error saving theme:', error);
+      setSaveStatus('error');
+      setErrorMessage('Failed to save theme');
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -171,21 +170,21 @@ interface SettingsPanelProps {
               <X className="h-5 w-5" />
             </button>
           </div>
-  
+
           <div className="flex-1 space-y-6 overflow-y-auto py-6">
             {/* User Info */}
             <div className="mb-6 flex items-center gap-3 rounded-lg bg-gray-50 p-4">
               {localImage ? (
                 <ProxiedImage
-                src={localImage}
-                alt="Profile"
-                width={40}
-                height={40}
-                className="h-16 w-16 overflow-hidden rounded-full border-2 border-gray-200"
-                fallbackImage="/images/goose.svg"
-              />
+                  src={localImage}
+                  alt="Profile"
+                  width={40}
+                  height={40}
+                  className="h-16 w-16 overflow-hidden rounded-full border-2 border-gray-200"
+                  fallbackImage="/images/goose.svg"
+                />
               ) : (
-                <div className="flex h-16 w-16 overflow-hidden rounded-full items-center justify-center border-2 border-gray-200">
+                <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 border-gray-200">
                   {localName ? (
                     <span className="text-xl font-medium text-gray-700">
                       {localName[0]?.toUpperCase()}
@@ -200,7 +199,7 @@ interface SettingsPanelProps {
                 <div className="text-sm text-gray-500">{session?.user?.email}</div>
               </div>
             </div>
-  
+
             {/* Display Name */}
             <div>
               <h3 className="mb-2 font-medium">Display Name</h3>
@@ -214,7 +213,7 @@ interface SettingsPanelProps {
                 />
               </div>
             </div>
-  
+
             {/* Profile Picture */}
             <div className="relative flex-1">
               <h3 className="mb-2 font-medium">Profile Picture</h3>
@@ -254,7 +253,7 @@ interface SettingsPanelProps {
                 </p>
               )}
             </div>
-  
+
             {/* Page Metadata */}
             <div>
               <h3 className="mb-2 font-medium">Page Metadata</h3>
@@ -283,17 +282,17 @@ interface SettingsPanelProps {
                 </div>
               </div>
             </div>
-  
+
             {/* Theme Selector */}
             <ThemeSelector currentTheme={localTheme} onThemeChange={handleLocalThemeChange} />
-  
+
             {/* Danger Zone */}
             <div className="border-t border-gray-200 pt-6">
               <h3 className="mb-2 font-medium text-red-600">Danger Zone</h3>
               <button className="mb-3 w-full rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-red-600 hover:bg-red-100">
                 Delete Account
               </button>
-  
+
               <button
                 onClick={onSignOut}
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-gray-700 hover:bg-gray-200"

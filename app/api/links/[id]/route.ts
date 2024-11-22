@@ -38,6 +38,7 @@ export async function PATCH(request: Request) {
         url: data.url !== undefined ? data.url : undefined,
         enabled: data.enabled !== undefined ? data.enabled : undefined,
         order: data.order !== undefined ? data.order : undefined,
+        emoji: data.emoji !== undefined ? data.emoji : undefined, // Add emoji field
       },
     });
 

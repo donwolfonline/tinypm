@@ -27,20 +27,20 @@ export function ProxiedImage({
   fallbackClassName = '',
   style = {},
   fallbackImage = '/images/goose.svg',
-  useIconFallback = false
+  useIconFallback = false,
 }: ProxiedImageProps) {
   const [error, setError] = useState(false);
 
-  const imageUrl = src?.startsWith('/') 
-    ? src 
-    : src 
-      ? `/api/proxy-image?url=${encodeURIComponent(src)}` 
+  const imageUrl = src?.startsWith('/')
+    ? src
+    : src
+      ? `/api/proxy-image?url=${encodeURIComponent(src)}`
       : fallbackImage;
 
   if (!src || error) {
     if (useIconFallback) {
       return (
-        <div 
+        <div
           className={`flex items-center justify-center bg-gray-100 ${fallbackClassName}`}
           style={style}
         >
@@ -48,7 +48,7 @@ export function ProxiedImage({
         </div>
       );
     }
-    
+
     return (
       <Image
         src={fallbackImage}

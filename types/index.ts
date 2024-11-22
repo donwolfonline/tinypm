@@ -5,6 +5,7 @@ export interface Link {
   title: string;
   url: string;
   enabled: boolean;
+  emoji?: string | null;
   order: number;
   clicks: number;
   userId: string;
@@ -22,6 +23,9 @@ export interface User {
   links: Link[];
   pageTitle?: string | null;
   pageDesc?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  emailVerified: Date | null;
 }
 
 export interface Session {

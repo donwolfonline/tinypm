@@ -154,13 +154,13 @@ export default function DashboardPage() {
   };
 
   const handleSessionUpdate = async () => {
-    const response = await fetch('/api/user');
-    const userData = await response.json();
-    
-    console.log('Latest user data:', userData);
+    // const response = await fetch('/api/user');
+    // const userData = await response.json();
+
+    // console.log('Latest user data:', userData);
 
     const updated = await updateSession();
-    console.log('Session updated:', updated);
+    //console.log('Session updated:', updated);
     return updated;
   };
 
@@ -197,13 +197,13 @@ export default function DashboardPage() {
     const initializeUserData = async () => {
       if (!session?.user) return;
 
-      console.log('Initializing user data:', {
-        name: session.user.name,
-        pageTitle: session.user.pageTitle,
-        pageDesc: session.user.pageDesc,
-        theme: session.user.theme,
-        image: session.user.image,
-      });
+      // console.log('Initializing user data:', {
+      //   name: session.user.name,
+      //   pageTitle: session.user.pageTitle,
+      //   pageDesc: session.user.pageDesc,
+      //   theme: session.user.theme,
+      //   image: session.user.image,
+      // });
 
       // Set basic user data from session
       setDisplayName(session.user.name || '');

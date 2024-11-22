@@ -68,6 +68,7 @@ model Link {
   title     String
   url       String
   order     Int      @default(0)
+  emoji     String?
   enabled   Boolean  @default(true)
   clicks    Int      @default(0)
   userId    String

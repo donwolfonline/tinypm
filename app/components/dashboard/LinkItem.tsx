@@ -1,10 +1,11 @@
-// components/dashboard/LinkItem.tsx
+import React, { useState } from 'react';
 import { GripVertical, X } from 'lucide-react';
 import type { Link } from '@/types';
 import {
   DraggableProvidedDragHandleProps,
   DraggableProvidedDraggableProps,
 } from '@hello-pangea/dnd';
+import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/popover';
 
 interface LinkItemProps {
   link: Link;
@@ -16,6 +17,53 @@ interface LinkItemProps {
   forwardedRef: React.Ref<HTMLDivElement>;
 }
 
+// Mapping of domains to Simple Icons slugs
+const SOCIAL_ICON_MAPPING: { [key: string]: string } = {
+  'github.com': 'github',
+  'twitter.com': 'x',
+  'x.com': 'x',
+  'instagram.com': 'instagram',
+  'facebook.com': 'facebook',
+  'linkedin.com': 'linkedin',
+  'youtube.com': 'youtube',
+  'twitch.tv': 'twitch',
+  'tiktok.com': 'tiktok',
+  'discord.com': 'discord',
+  'discord.gg': 'discord',
+  'spotify.com': 'spotify',
+  'medium.com': 'medium',
+  'dev.to': 'devdotto',
+  'producthunt.com': 'producthunt',
+  'dribbble.com': 'dribbble',
+  'behance.net': 'behance',
+  'steamcommunity.com': 'steam',
+  'bsky.app': 'bluesky',
+  'bsky.social': 'bluesky',
+};
+
+const POPULAR_EMOJIS = [
+  '🌟',
+  '❤️',
+  '🎮',
+  '📚',
+  '🎵',
+  '🎨',
+  '📷',
+  '💼',
+  '🎯',
+  '✨',
+  '📱',
+  '💡',
+  '🔥',
+  '🎬',
+  '🌈',
+  '💫',
+  '📝',
+  '🎤',
+  '🚀',
+  '💻',
+];
+
 export function LinkItem({
   link,
   dragHandleProps,
@@ -25,6 +73,38 @@ export function LinkItem({
   onDelete,
   forwardedRef,
 }: LinkItemProps) {
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  // Get social media icon if URL matches
+  const getSocialIcon = (url: string) => {
+    try {
+      const hostname = new URL(url).hostname.replace('www.', '');
+      const iconSlug = SOCIAL_ICON_MAPPING[hostname];
+      return iconSlug ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`/api/proxy-image?url=${encodeURIComponent(
+            `https://cdn.simpleicons.org/${iconSlug}`
+          )}`}
+          alt={hostname}
+          className="h-6 w-6"
+          // Disable lazy loading since these icons are above the fold
+          loading="eager"
+        />
+      ) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const socialIcon = link.url ? getSocialIcon(link.url) : null;
+  const emoji = link.emoji || '🔗'; // Default emoji if none is set
+
+  const handleEmojiSelect = (selectedEmoji: string) => {
+    onUpdate(link.id, 'emoji', selectedEmoji);
+    setShowEmojiPicker(false);
+  };
+
   return (
     <div
       ref={forwardedRef}
@@ -36,6 +116,34 @@ export function LinkItem({
       <div {...dragHandleProps} className="cursor-grab">
         <GripVertical className="h-5 w-5 text-gray-400" />
       </div>
+
+      {/* Icon/Emoji Section */}
+      <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+        <PopoverTrigger asChild>
+          <button
+            className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-gray-100"
+            onClick={() => !socialIcon && setShowEmojiPicker(true)}
+          >
+            {socialIcon || <span className="text-lg">{emoji}</span>}
+          </button>
+        </PopoverTrigger>
+        {!socialIcon && (
+          <PopoverContent className="w-64 p-2">
+            <div className="grid grid-cols-5 gap-2">
+              {POPULAR_EMOJIS.map(emoji => (
+                <button
+                  key={emoji}
+                  onClick={() => handleEmojiSelect(emoji)}
+                  className="flex h-8 w-8 items-center justify-center rounded hover:bg-gray-100"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </PopoverContent>
+        )}
+      </Popover>
+
       <div className="flex flex-1 flex-col gap-2">
         <input
           type="text"
@@ -52,12 +160,14 @@ export function LinkItem({
           placeholder="https://"
         />
       </div>
+
       <button
         onClick={() => onDelete(link.id)}
         className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100"
       >
         <X className="h-4 w-4" />
       </button>
+
       <label className="relative inline-flex cursor-pointer items-center">
         <input
           type="checkbox"
@@ -70,3 +180,5 @@ export function LinkItem({
     </div>
   );
 }
+
+export default LinkItem;

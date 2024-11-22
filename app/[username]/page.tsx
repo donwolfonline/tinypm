@@ -39,18 +39,31 @@ const getCachedUser = (username: string) =>
           links: {
             where: { enabled: true },
             orderBy: { order: 'asc' },
+            select: {
+              id: true,
+              title: true,
+              url: true,
+              emoji: true,
+              enabled: true,
+              order: true,
+              clicks: true,
+              userId: true,
+              createdAt: true,
+              updatedAt: true,
+            },
           },
         },
       });
       return user;
     },
-    [`user-${username}`], // Cache key includes username
+    [`user-${username}`],
     {
-      revalidate: 60, // Cache for 60 seconds
-      tags: [`user-${username}`], // Tag for cache invalidation
+      revalidate: 60,
+      tags: [`user-${username}`],
     }
   )();
 
+// The function remains the same
 async function getUser(username: string): Promise<User> {
   const user = await getCachedUser(username);
   if (!user) notFound();
@@ -98,6 +111,7 @@ export default async function UserPage(props: { params: PageParams }) {
               href={link.url}
               title={link.title}
               theme={userTheme}
+              emoji={link.emoji}
             />
           ))}
         </div>

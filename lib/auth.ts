@@ -24,7 +24,7 @@ export const authOptions: AuthOptions = {
           where: { email: user.email },
         });
 
-        console.log('Existing user:', existingUser);
+        //console.log('Existing user exists.');
 
         if (!existingUser) {
           // Create new user
@@ -64,9 +64,9 @@ export const authOptions: AuthOptions = {
                 id: dbUser.id,
                 name: dbUser.name,
                 username: dbUser.username,
-                image: dbUser.image,        
-                pageTitle: dbUser.pageTitle, 
-                pageDesc: dbUser.pageDesc,   
+                image: dbUser.image,
+                pageTitle: dbUser.pageTitle,
+                pageDesc: dbUser.pageDesc,
                 theme: dbUser.theme,
               },
             };

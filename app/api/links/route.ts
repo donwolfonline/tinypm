@@ -52,6 +52,7 @@ export async function POST(request: Request) {
         url: data.url || '',
         enabled: data.enabled ?? true,
         order: data.order ?? 0,
+        emoji: data.emoji || '🔗', // Add default emoji
         userId: user.id,
       },
     });

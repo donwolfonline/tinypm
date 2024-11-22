@@ -11,19 +11,19 @@ export async function GET(request: Request) {
 
   try {
     const response = await fetch(imageUrl);
-    
+
     if (!response.ok) {
       throw new Error('Failed to fetch image');
     }
 
     const contentType = response.headers.get('content-type');
-    
+
     if (!contentType?.startsWith('image/')) {
       return new NextResponse('Invalid image type', { status: 400 });
     }
 
     const buffer = await response.arrayBuffer();
-    
+
     return new NextResponse(buffer, {
       headers: {
         'Content-Type': contentType,
