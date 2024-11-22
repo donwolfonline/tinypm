@@ -55,13 +55,31 @@ export async function PATCH(request: Request) {
       updateData.theme = data.theme;
     }
 
-    // Add handling for new metadata fields
     if (data.pageTitle !== undefined) {
       updateData.pageTitle = data.pageTitle.trim() || null;
     }
 
     if (data.pageDesc !== undefined) {
       updateData.pageDesc = data.pageDesc.trim() || null;
+    }
+
+    if (data.image !== undefined) {
+      // If image is empty string or null, set to null in DB
+      if (!data.image || !data.image.trim()) {
+        updateData.image = null;
+      } else {
+        const trimmedImage = data.image.trim();
+        // Only validate URL if there is an actual URL to validate
+        try {
+          new URL(trimmedImage);
+          updateData.image = trimmedImage;
+        } catch (e) {
+          return NextResponse.json(
+            { error: 'Invalid image URL format' },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     const updatedUser = await prisma.user.update({

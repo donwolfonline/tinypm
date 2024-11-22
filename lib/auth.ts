@@ -64,6 +64,10 @@ export const authOptions: AuthOptions = {
                 id: dbUser.id,
                 name: dbUser.name,
                 username: dbUser.username,
+                image: dbUser.image,        
+                pageTitle: dbUser.pageTitle, 
+                pageDesc: dbUser.pageDesc,   
+                theme: dbUser.theme,
               },
             };
           }

@@ -9,6 +9,7 @@ import EditButton from '../components/EditButton';
 import { themes, getThemeStyles } from '@/lib/themes';
 import type { Link as LinkType, User } from '@/types';
 import { unstable_cache } from 'next/cache';
+import { ProxiedImage } from '../components/ProxiedImage';
 
 type PageParams = Promise<{ username: string }>;
 
@@ -70,7 +71,7 @@ export default async function UserPage(props: { params: PageParams }) {
         {/* Profile Header */}
         <div className="mb-8 text-center">
           {user.image ? (
-            <Image
+            <ProxiedImage
               src={user.image}
               alt={user.name || ''}
               width={80}
