@@ -57,7 +57,7 @@ export default function LinkButton({ id, href, title, theme, emoji }: Props) {
         <img
           src={`/api/proxy-image?url=${encodeURIComponent(
             `https://cdn.simpleicons.org/${iconSlug}/${
-              themeConfig.buttonBg.includes('bg-white') ? 'ffffff' : '000000'
+              themeConfig.buttonBg.includes('bg-black') ? 'ffffff' : '000000'
             }`
           )}`}
           alt={hostname}
