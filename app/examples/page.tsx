@@ -23,11 +23,11 @@ const EXAMPLE_PROFILES = [
     bio: 'Gaming + Streaming and just having fun :)',
   },
   {
-    username: 'alex',
-    name: 'Alex Rodriguez',
-    role: 'Fitness Coach',
+    username: 'kotri',
+    name: 'Kotri',
+    role: 'Developer',
     image: '/images/goose.svg',
-    bio: 'Helping you achieve your fitness goals',
+    bio: 'Just a big bird',
   },
 ];
 
