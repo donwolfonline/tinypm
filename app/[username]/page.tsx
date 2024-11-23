@@ -29,9 +29,13 @@ type PrismaContent = {
   updatedAt: Date;
 };
 
+// In your UserPage's generateMetadata function
 export async function generateMetadata(props: { params: PageParams }): Promise<Metadata> {
   const { username } = await props.params;
   const user = await getUser(username);
+  const userTheme = user.theme || 'YELLOW';
+  const themeConfig = themes[userTheme];
+
   return {
     title: user.pageTitle || `${user.name || username} | tiny.pm`,
     description: user.pageDesc || `Check out ${user.name || username}'s links on tiny.pm`,
@@ -43,6 +47,8 @@ export async function generateMetadata(props: { params: PageParams }): Promise<M
       title: user.pageTitle || `${user.name || username} | tiny.pm`,
       description: user.pageDesc || `Check out ${user.name || username}'s links on tiny.pm`,
     },
+    // Add themeColor to metadata
+    themeColor: themeConfig.themeColor || '#FFCC00',
   };
 }
 

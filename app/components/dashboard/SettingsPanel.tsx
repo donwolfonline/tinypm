@@ -210,6 +210,11 @@ export function SettingsPanel({
                   onChange={e => handleLocalChange('name', e.target.value)}
                   className="w-full rounded-lg border border-gray-200 px-3 py-2"
                   placeholder="Your display name"
+                  style={{ 
+                    fontSize: '16px',  // Base size to prevent zoom
+                    transform: 'scale(0.875)',  // Scale down visually
+                    transformOrigin: 'left center' 
+                  }}
                 />
               </div>
             </div>
@@ -229,6 +234,11 @@ export function SettingsPanel({
                     imageError ? 'border-red-300' : 'border-gray-200'
                   } px-3 py-2 pr-10`}
                   placeholder="Enter image URL (https://...)"
+                  style={{ 
+                    fontSize: '16px',  // Base size to prevent zoom
+                    transform: 'scale(0.875)',  // Scale down visually
+                    transformOrigin: 'left center' 
+                  }}
                 />
                 {localImage && (
                   <button
@@ -266,6 +276,11 @@ export function SettingsPanel({
                     onChange={e => handleLocalChange('pageTitle', e.target.value)}
                     className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2"
                     placeholder="Custom page title (optional)"
+                    style={{ 
+                      fontSize: '16px',  // Base size to prevent zoom
+                      transform: 'scale(0.875)',  // Scale down visually
+                      transformOrigin: 'left center' 
+                    }}
                   />
                   <p className="mt-1 text-xs text-gray-500">Leave blank to use default</p>
                 </div>

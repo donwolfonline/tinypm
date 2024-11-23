@@ -41,6 +41,11 @@ export function TextItem({
         className="w-full rounded border-none bg-transparent px-2 py-1 text-sm focus:ring-2 focus:ring-black"
         placeholder="Enter your text here..."
         rows={3}
+        style={{ 
+          fontSize: '16px',  // Base size to prevent zoom
+          transform: 'scale(0.875)',  // Scale down visually
+          transformOrigin: 'left center' 
+        }}
       />
 
       <button

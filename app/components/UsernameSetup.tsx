@@ -66,6 +66,11 @@ export default function UsernameSetup() {
                 onChange={e => setUsername(e.target.value.toLowerCase())}
                 className="flex-1 rounded-r-lg border-0 py-2 focus:ring-2 focus:ring-black"
                 placeholder="username"
+                style={{ 
+                  fontSize: '16px',
+                  transform: 'scale(0.875)',
+                  transformOrigin: 'left center' 
+                }}
                 required
               />
             </div>

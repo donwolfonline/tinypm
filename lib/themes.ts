@@ -12,6 +12,7 @@ export const themes = {
     buttonText: 'text-[#FFCC00]',
     buttonHover: 'hover:bg-gray-900',
     buttonBorder: 'border-black',
+    themeColor: '#FFCC00',
   },
   BLUE: {
     name: 'Ocean',
@@ -23,17 +24,19 @@ export const themes = {
     buttonText: 'text-blue-600',
     buttonHover: 'hover:bg-blue-50',
     buttonBorder: 'border-navy-dark',
+    themeColor: '#60A5FA',
   },
   GREEN: {
     name: 'Forest',
     from: '#34D399',
     to: '#059669',
-    text: 'text-tree-brown', // Darker nav brown
+    text: 'text-tree-brown',
     subtext: 'text-white/80',
     buttonBg: 'bg-white',
     buttonText: 'text-green-600',
     buttonHover: 'hover:bg-green-50',
-    buttonBorder: 'border-forest-brown', // Darker border brown
+    buttonBorder: 'border-forest-brown',
+    themeColor: '#34D399',
   },
   PURPLE: {
     name: 'Twilight',
@@ -45,6 +48,7 @@ export const themes = {
     buttonText: 'text-purple-600',
     buttonHover: 'hover:bg-purple-50',
     buttonBorder: 'border-black',
+    themeColor: '#A855F7',
   },
   DARK: {
     name: 'Midnight',
@@ -56,6 +60,7 @@ export const themes = {
     buttonText: 'text-gray-900',
     buttonHover: 'hover:bg-white',
     buttonBorder: 'border-midnight-teal',
+    themeColor: '#011502',
   },
   DAISY: {
     name: 'Daisy Garden',
@@ -67,6 +72,7 @@ export const themes = {
     buttonText: 'text-black',
     buttonHover: 'hover:bg-yellow-300',
     buttonBorder: 'border-daisy-yellow',
+    themeColor: '#EDEDE9',
   },
   ROSE: {
     name: 'Foundation',
@@ -78,6 +84,7 @@ export const themes = {
     buttonText: 'text-purple-700',
     buttonHover: 'hover:bg-purple-50',
     buttonBorder: 'border-black',
+    themeColor: '#B5838D',
   },
   SLATE: {
     name: 'Slate',
@@ -88,7 +95,8 @@ export const themes = {
     buttonBg: 'bg-gray-200',
     buttonText: 'text-gray-900',
     buttonHover: 'hover:bg-white',
-    buttonBorder: 'border-black', // Changed to black
+    buttonBorder: 'border-black',
+    themeColor: '#5E5B52',
   },
 } as const;
 

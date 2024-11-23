@@ -128,6 +128,11 @@ export default function Register() {
                 required
                 minLength={3}
                 maxLength={20}
+                style={{ 
+                  fontSize: '16px',  // Base size to prevent zoom
+                  transform: 'scale(0.875)',  // Scale down visually
+                  transformOrigin: 'left center' 
+                }}
               />
               <div className="absolute right-3 top-3">
                 {isChecking ? (

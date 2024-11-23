@@ -19,6 +19,7 @@ import { SaveStatusIndicator } from '../components/dashboard/SaveStatusIndicator
 import LoadingSpinner from '../components/LoadingSpinner';
 import { ContentItem } from '../components/ContentItems';
 import { AddContentMenu } from '../components/AddContentMenu';
+import { ThemeColorHandler } from '../components/ThemeColorHandler';
 
 type SaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
 
@@ -79,7 +80,7 @@ export default function DashboardPage() {
       console.error('Error fetching content:', error);
     } finally {
       setIsLoading(false);
-      setTimeout(() => setIsTransitioning(false), 500);
+      setTimeout(() => setIsTransitioning(false), 1000);
     }
   };
 
@@ -252,6 +253,7 @@ export default function DashboardPage() {
 
   return (
     <>
+      <ThemeColorHandler theme={currentTheme} />
       {(isLoading || isTransitioning) && (
         <div className="transition-colors duration-300 ease-in-out">
           <LoadingSpinner theme={currentTheme} />

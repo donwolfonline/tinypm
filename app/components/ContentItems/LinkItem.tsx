@@ -108,6 +108,11 @@ export function LinkItem({
           onChange={e => onUpdate(link.id, 'title', e.target.value)}
           className="w-full rounded border-none bg-transparent px-2 py-1 text-sm focus:ring-2 focus:ring-black"
           placeholder="Link Title"
+          style={{ 
+            fontSize: '16px',  // Base size to prevent zoom
+            transform: 'scale(0.875)',  // Scale down visually
+            transformOrigin: 'left center' 
+          }}
         />
         <input
           type="url"
@@ -116,6 +121,11 @@ export function LinkItem({
           onBlur={e => handleUrlChange(e.target.value)}
           className="w-full rounded border-none bg-transparent px-2 py-1 text-sm text-gray-500 focus:ring-2 focus:ring-black"
           placeholder="https://"
+          style={{ 
+            fontSize: '16px',  // Base size to prevent zoom
+            transform: 'scale(0.875)',  // Scale down visually
+            transformOrigin: 'left center' 
+          }}
         />
       </div>
 
