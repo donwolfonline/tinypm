@@ -18,6 +18,8 @@ interface LinkItemProps {
 }
 
 // Mapping of domains to Simple Icons slugs
+
+//NOTE I NEED TO MAKE THESE WILDCARDS
 const SOCIAL_ICON_MAPPING: { [key: string]: string } = {
   'github.com': 'github',
   'twitter.com': 'x',
