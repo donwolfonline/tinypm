@@ -1,8 +1,9 @@
-// app/api/links/route.ts
+// app/api/content/route.ts
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getAuthSession } from '@/lib/auth';
 import { revalidateTag } from 'next/cache';
+import type { ContentType } from '@/types';
 
 export async function GET() {
   try {
@@ -12,7 +13,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const links = await prisma.link.findMany({
+    const content = await prisma.content.findMany({
       where: {
         user: {
           email: session.user.email,
@@ -21,10 +22,10 @@ export async function GET() {
       orderBy: { order: 'asc' },
     });
 
-    return NextResponse.json({ links });
+    return NextResponse.json({ content });
   } catch (error) {
-    console.error('Error fetching links:', error);
-    return NextResponse.json({ error: 'Failed to fetch links' }, { status: 500 });
+    console.error('Error fetching content:', error);
+    return NextResponse.json({ error: 'Failed to fetch content' }, { status: 500 });
   }
 }
 
@@ -45,24 +46,38 @@ export async function POST(request: Request) {
     }
 
     const data = await request.json();
+    const type = data.type as ContentType;
 
-    const link = await prisma.link.create({
-      data: {
+    const contentData = {
+      type,
+      enabled: data.enabled ?? true,
+      order: data.order ?? 0,
+      userId: user.id,
+      // Add fields based on content type
+      ...(type === 'LINK' && {
         title: data.title || '',
         url: data.url || '',
-        enabled: data.enabled ?? true,
-        order: data.order ?? 0,
-        emoji: data.emoji || '🔗', // Add default emoji
-        userId: user.id,
-      },
+        emoji: data.emoji || '🔗',
+      }),
+      ...(type === 'TITLE' && {
+        title: data.title || '',
+        emoji: data.emoji,
+      }),
+      ...(type === 'TEXT' && {
+        text: data.text || '',
+      }),
+    };
+
+    const content = await prisma.content.create({
+      data: contentData,
     });
 
     // Revalidate the user's profile page cache
     revalidateTag(`user-${user.username}`);
 
-    return NextResponse.json(link);
+    return NextResponse.json(content);
   } catch (error) {
-    console.error('Error creating link:', error);
-    return NextResponse.json({ error: 'Failed to create link' }, { status: 500 });
+    console.error('Error creating content:', error);
+    return NextResponse.json({ error: 'Failed to create content' }, { status: 500 });
   }
 }

@@ -26,6 +26,8 @@ const SOCIAL_ICON_MAPPING: { [key: string]: string } = {
   'steamcommunity.com': 'steam',
   'bsky.app': 'bluesky',
   'bsky.social': 'bluesky',
+  'amzn.com': 'amazon',
+  'amazon.com': 'amazon',
 };
 
 type Props = {

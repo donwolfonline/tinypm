@@ -6,18 +6,19 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { Plus, Settings } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import debounce from 'lodash/debounce';
-import type { Link as LinkType } from '@/types';
-import { Theme } from '@/types';
+import { Theme, Content } from '@/types';
 import { themes, getThemeStyles } from '@/lib/themes';
+
 
 // Import our new components
 import { PreviewBanner } from '../components/dashboard/PreviewBanner';
-import { LinkItem } from '../components/dashboard/LinkItem';
 import { SettingsPanel } from '../components/dashboard/SettingsPanel';
 import { SaveStatusIndicator } from '../components/dashboard/SaveStatusIndicator';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { ContentItem } from '../components/ContentItems';
+import { AddContentMenu } from '../components/AddContentMenu';
 
 type SaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
 
@@ -28,7 +29,7 @@ export default function DashboardPage() {
   // State management
   const [isLoading, setIsLoading] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(true);
-  const [links, setLinks] = useState<LinkType[]>([]);
+  const [content, setContent] = useState<Content[]>([]);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -44,15 +45,15 @@ export default function DashboardPage() {
 
   // Create debounced save function
   const debouncedSaveRef = useRef(
-    debounce(async (linksToSave: LinkType[]) => {
+    debounce(async (contentToSave: Content[]) => {
       try {
         setSaveStatus('saving');
         await Promise.all(
-          linksToSave.map(async link => {
-            await fetch(`/api/links/${link.id}`, {
+          contentToSave.map(async item => {
+            await fetch(`/api/content/${item.id}`, {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(link),
+              body: JSON.stringify(item),
             });
           })
         );
@@ -67,15 +68,15 @@ export default function DashboardPage() {
   );
 
   // Fetch links from API
-  const fetchLinks = async () => {
+  const fetchContent = async () => {
     try {
-      const response = await fetch('/api/links');
+      const response = await fetch('/api/content');
       const data = await response.json();
-      if (data.links) {
-        setLinks(data.links);
+      if (data.content) {
+        setContent(data.content);
       }
     } catch (error) {
-      console.error('Error fetching links:', error);
+      console.error('Error fetching content:', error);
     } finally {
       setIsLoading(false);
       setTimeout(() => setIsTransitioning(false), 500);
@@ -83,12 +84,12 @@ export default function DashboardPage() {
   };
 
   // Handle link changes
-  const handleLinksChange = useCallback(
-    (newLinks: LinkType[]) => {
-      setLinks(newLinks);
+  const handleContentChange = useCallback(
+    (newContent: Content[]) => {
+      setContent(newContent);
       setSaveStatus('pending');
       unsavedChangesRef.current = true;
-      debouncedSaveRef.current(newLinks);
+      debouncedSaveRef.current(newContent);
     },
     [setSaveStatus]
   );
@@ -97,59 +98,64 @@ export default function DashboardPage() {
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
 
-    const newLinks = Array.from(links);
-    const [movedItem] = newLinks.splice(result.source.index, 1);
-    newLinks.splice(result.destination.index, 0, movedItem);
+    const newContent = Array.from(content);
+    const [movedItem] = newContent.splice(result.source.index, 1);
+    newContent.splice(result.destination.index, 0, movedItem);
 
-    const updatedLinks = newLinks.map((link, index) => ({
-      ...link,
+    const updatedContent = newContent.map((item, index) => ({
+      ...item,
       order: index,
     }));
 
-    handleLinksChange(updatedLinks);
+    handleContentChange(updatedContent);
   };
 
   // Handle link operations
-  const addNewLink = async () => {
+  const addNewContent = async (type: 'LINK' | 'TITLE' | 'DIVIDER' | 'TEXT') => {
     try {
-      const response = await fetch('/api/links', {
+      const response = await fetch('/api/content', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
         body: JSON.stringify({
-          title: '',
-          url: '',
+          type,
           enabled: true,
-          order: links.length,
+          order: content.length,
+          // Add default values based on type
+          ...(type === 'LINK' && { title: '', url: '' }),
+          ...(type === 'TITLE' && { title: '' }),
+          ...(type === 'TEXT' && { text: '' }),
         }),
       });
 
-      if (!response.ok) throw new Error(`Failed to add link: ${response.statusText}`);
+      if (!response.ok) throw new Error(`Failed to add content: ${response.statusText}`);
 
-      const newLink = await response.json();
-      handleLinksChange([...links, newLink]);
+      const newContent = await response.json();
+      handleContentChange([...content, newContent]);
     } catch (error) {
-      console.error('Error adding new link:', error);
+      console.error('Error adding new content:', error);
       setSaveStatus('error');
-      setErrorMessage('Failed to add new link');
+      setErrorMessage('Failed to add new content');
     }
   };
 
-  const updateLink = (id: string, field: keyof LinkType, value: string | boolean) => {
-    const updatedLinks = links.map(link => (link.id === id ? { ...link, [field]: value } : link));
-    handleLinksChange(updatedLinks);
+  const updateContent = (id: string, field: keyof Content, value: string | boolean | number) => {
+    const updatedContent = content.map(item =>
+      item.id === id ? { ...item, [field]: value } : item
+    );
+    handleContentChange(updatedContent);
   };
 
-  const deleteLink = async (id: string) => {
+  const deleteContent = async (id: string) => {
     try {
-      await fetch(`/api/links/${id}`, { method: 'DELETE' });
-      handleLinksChange(links.filter(link => link.id !== id));
+      await fetch(`/api/content/${id}`, { method: 'DELETE' });
+      handleContentChange(content.filter(item => item.id !== id));
     } catch (error) {
-      console.error('Error deleting link:', error);
+      console.error('Error deleting content:', error);
       setSaveStatus('error');
-      setErrorMessage('Failed to delete link');
+      setErrorMessage('Failed to delete content');
     }
   };
 
@@ -177,7 +183,7 @@ export default function DashboardPage() {
     if (status === 'unauthenticated') {
       router.push('/login');
     } else if (session?.user?.id) {
-      fetchLinks();
+      fetchContent();
     }
   }, [status, session, router]);
 
@@ -287,44 +293,38 @@ export default function DashboardPage() {
         <main className="mx-auto max-w-2xl px-4 pt-24">
           <PreviewBanner username={session?.user?.username} theme={currentTheme} />
 
-          {/* Links Section */}
-          <div className={`rounded-xl border-2 ${themeConfig.buttonBorder} bg-white p-6 shadow-lg`}>
-            <h2 className={`mb-6 text-xl font-bold ${themeConfig.buttonText}`}>Your Links</h2>
+          {/* Content Section */}
+        <div className={`rounded-xl border-2 ${themeConfig.buttonBorder} bg-white p-6 shadow-lg`}>
+          <h2 className={`mb-6 text-xl font-bold ${themeConfig.buttonText}`}>Your Content</h2>
 
-            <DragDropContext onDragEnd={onDragEnd}>
-              <Droppable droppableId="links">
-                {provided => (
-                  <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
-                    {links.map((link, index) => (
-                      <Draggable key={link.id} draggableId={link.id} index={index}>
-                        {(provided, snapshot) => (
-                          <LinkItem
-                            link={link}
-                            dragHandleProps={provided.dragHandleProps}
-                            draggableProps={provided.draggableProps}
-                            isDragging={snapshot.isDragging}
-                            onUpdate={updateLink}
-                            onDelete={deleteLink}
-                            forwardedRef={provided.innerRef}
-                          />
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </DragDropContext>
+          <DragDropContext onDragEnd={onDragEnd}>
+            <Droppable droppableId="content">
+              {provided => (
+                <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
+                  {content.map((item, index) => (
+                    <Draggable key={item.id} draggableId={item.id} index={index}>
+                      {(provided, snapshot) => (
+                        <ContentItem
+                          content={item}
+                          dragHandleProps={provided.dragHandleProps}
+                          draggableProps={provided.draggableProps}
+                          isDragging={snapshot.isDragging}
+                          onUpdate={updateContent}
+                          onDelete={deleteContent}
+                          forwardedRef={provided.innerRef}
+                        />
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
 
-            {/* Add Link Button */}
-            <button
-              onClick={addNewLink}
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-black/20 px-4 py-3 text-black/60 transition-colors hover:border-black hover:text-black"
-            >
-              <Plus className="h-5 w-5" />
-              Add Link
-            </button>
-          </div>
+          {/* Add Content Menu */}
+          <AddContentMenu onAdd={addNewContent} />
+        </div>
         </main>
 
         {/* Settings Panel */}

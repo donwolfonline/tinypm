@@ -12,7 +12,44 @@ export interface Link {
   createdAt: Date;
   updatedAt: Date;
 }
+export type ContentType = 'LINK' | 'TITLE' | 'DIVIDER' | 'TEXT';
 
+interface BaseContent {
+  id: string;
+  type: ContentType;
+  order: number;
+  enabled: boolean;
+  userId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface LinkContent extends BaseContent {
+  type: 'LINK';
+  title: string;
+  url: string;
+  emoji?: string | null;
+  clicks: number;
+}
+
+export interface TitleContent extends BaseContent {
+  type: 'TITLE';
+  title: string;
+  emoji?: string | null;
+}
+
+export interface DividerContent extends BaseContent {
+  type: 'DIVIDER';
+}
+
+export interface TextContent extends BaseContent {
+  type: 'TEXT';
+  text: string;
+}
+
+export type Content = LinkContent | TitleContent | DividerContent | TextContent;
+
+// Update User interface to include both links and content
 export interface User {
   id: string;
   name: string | null;
@@ -20,7 +57,7 @@ export interface User {
   image: string | null;
   username: string | null;
   theme?: Theme | null;
-  links: Link[];
+  content: Content[];
   pageTitle?: string | null;
   pageDesc?: string | null;
   createdAt: Date;

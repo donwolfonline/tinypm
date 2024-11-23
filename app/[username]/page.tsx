@@ -4,14 +4,30 @@ import { notFound } from 'next/navigation';
 import prisma from '@/lib/prisma';
 import Image from 'next/image';
 import Link from 'next/link';
-import LinkButton from '../components/LinkButton';
-import EditButton from '../components/EditButton';
 import { themes, getThemeStyles } from '@/lib/themes';
-import type { Link as LinkType, User } from '@/types';
+import type { Content, User, ContentType } from '@/types';
+import EditButton from '../components/EditButton';
 import { unstable_cache } from 'next/cache';
 import { ProxiedImage } from '../components/ProxiedImage';
+import { ContentRenderer } from '../components/ContentRenderer';
+
 
 type PageParams = Promise<{ username: string }>;
+
+type PrismaContent = {
+  id: string;
+  type: ContentType;
+  title: string | null;
+  url: string | null;
+  text: string | null;
+  emoji: string | null;
+  enabled: boolean;
+  order: number;
+  clicks: number;
+  userId: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 export async function generateMetadata(props: { params: PageParams }): Promise<Metadata> {
   const { username } = await props.params;
@@ -30,19 +46,67 @@ export async function generateMetadata(props: { params: PageParams }): Promise<M
   };
 }
 
+function transformPrismaContent(prismaContent: PrismaContent[]): Content[] {
+  return prismaContent.map(item => {
+    const base = {
+      id: item.id,
+      type: item.type,
+      order: item.order,
+      enabled: item.enabled,
+      userId: item.userId,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+    };
+
+    switch (item.type) {
+      case 'LINK':
+        return {
+          ...base,
+          type: 'LINK' as const,
+          title: item.title || '',
+          url: item.url || '',
+          emoji: item.emoji,
+          clicks: item.clicks,
+        };
+      case 'TITLE':
+        return {
+          ...base,
+          type: 'TITLE' as const,
+          title: item.title || '',
+          emoji: item.emoji,
+        };
+      case 'TEXT':
+        return {
+          ...base,
+          type: 'TEXT' as const,
+          text: item.text || '',
+        };
+      case 'DIVIDER':
+        return {
+          ...base,
+          type: 'DIVIDER' as const,
+        };
+      default:
+        throw new Error(`Unknown content type: ${item.type}`);
+    }
+  });
+}
+
 const getCachedUser = (username: string) =>
   unstable_cache(
     async () => {
       const user = await prisma.user.findUnique({
         where: { username },
         include: {
-          links: {
+          content: {
             where: { enabled: true },
             orderBy: { order: 'asc' },
             select: {
               id: true,
+              type: true,
               title: true,
               url: true,
+              text: true,
               emoji: true,
               enabled: true,
               order: true,
@@ -54,7 +118,13 @@ const getCachedUser = (username: string) =>
           },
         },
       });
-      return user;
+
+      if (!user) return null;
+
+      return {
+        ...user,
+        content: transformPrismaContent(user.content),
+      };
     },
     [`user-${username}`],
     {
@@ -63,12 +133,12 @@ const getCachedUser = (username: string) =>
     }
   )();
 
-// The function remains the same
 async function getUser(username: string): Promise<User> {
   const user = await getCachedUser(username);
   if (!user) notFound();
   return user;
 }
+
 
 // For the page component, we also await the params
 export default async function UserPage(props: { params: PageParams }) {
@@ -102,19 +172,8 @@ export default async function UserPage(props: { params: PageParams }) {
           <h1 className={`mb-2 text-2xl font-bold ${themeConfig.text}`}>{user.name}</h1>
         </div>
 
-        {/* Links */}
-        <div className="space-y-4">
-          {user.links.map((link: LinkType) => (
-            <LinkButton
-              key={link.id}
-              id={link.id}
-              href={link.url}
-              title={link.title}
-              theme={userTheme}
-              emoji={link.emoji}
-            />
-          ))}
-        </div>
+        {/* Content */}
+        <ContentRenderer content={user.content} theme={userTheme} />
 
         {/* Footer */}
         <div className="mt-12 text-center">

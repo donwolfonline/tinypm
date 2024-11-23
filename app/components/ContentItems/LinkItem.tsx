@@ -1,21 +1,14 @@
-import React, { useState } from 'react';
+// components/ContentItems/LinkItem.tsx
+// components/ContentItems/LinkItem.tsx
+import React from 'react';
 import { GripVertical, X } from 'lucide-react';
-import type { Link } from '@/types';
 import {
   DraggableProvidedDragHandleProps,
   DraggableProvidedDraggableProps,
 } from '@hello-pangea/dnd';
-import { Popover, PopoverContent, PopoverTrigger } from '@/app/components/popover';
-
-interface LinkItemProps {
-  link: Link;
-  dragHandleProps: DraggableProvidedDragHandleProps | null | undefined;
-  draggableProps?: DraggableProvidedDraggableProps;
-  isDragging: boolean;
-  onUpdate: (id: string, field: keyof Link, value: string | boolean) => void;
-  onDelete: (id: string) => void;
-  forwardedRef: React.Ref<HTMLDivElement>;
-}
+import type { Link } from '@/types';
+import { EmojiPicker } from '../EmojiPicker';
+import { normalizeUrl } from '@/lib/url-utils';
 
 // Mapping of domains to Simple Icons slugs
 const SOCIAL_ICON_MAPPING: { [key: string]: string } = {
@@ -43,40 +36,25 @@ const SOCIAL_ICON_MAPPING: { [key: string]: string } = {
   'amazon.com': 'amazon',
 };
 
-const POPULAR_EMOJIS = [
-  '🌟',
-  '❤️',
-  '🎮',
-  '📚',
-  '🎵',
-  '🎨',
-  '📷',
-  '💼',
-  '🎯',
-  '✨',
-  '📱',
-  '💡',
-  '🔥',
-  '🎬',
-  '🌈',
-  '💫',
-  '📝',
-  '🎤',
-  '🚀',
-  '💻',
-];
+interface LinkItemProps {
+  link: Link;
+  dragHandleProps: DraggableProvidedDragHandleProps | null | undefined;
+  draggableProps: DraggableProvidedDraggableProps;
+  isDragging: boolean;
+  onUpdate: (id: string, field: keyof Link, value: string | boolean) => void;
+  onDelete: (id: string) => void;
+  forwardedRef: React.Ref<HTMLDivElement>;
+}
 
 export function LinkItem({
   link,
   dragHandleProps,
-  draggableProps,
   isDragging,
+  draggableProps,
   onUpdate,
   onDelete,
   forwardedRef,
 }: LinkItemProps) {
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-
   // Get social media icon if URL matches
   const getSocialIcon = (url: string) => {
     try {
@@ -90,7 +68,6 @@ export function LinkItem({
           )}`}
           alt={hostname}
           className="h-6 w-6"
-          // Disable lazy loading since these icons are above the fold
           loading="eager"
         />
       ) : null;
@@ -100,11 +77,9 @@ export function LinkItem({
   };
 
   const socialIcon = link.url ? getSocialIcon(link.url) : null;
-  const emoji = link.emoji || '🔗'; // Default emoji if none is set
 
-  const handleEmojiSelect = (selectedEmoji: string) => {
-    onUpdate(link.id, 'emoji', selectedEmoji);
-    setShowEmojiPicker(false);
+  const handleUrlChange = (newUrl: string) => {
+    onUpdate(link.id, 'url', normalizeUrl(newUrl));
   };
 
   return (
@@ -119,32 +94,12 @@ export function LinkItem({
         <GripVertical className="h-5 w-5 text-gray-400" />
       </div>
 
-      {/* Icon/Emoji Section */}
-      <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
-        <PopoverTrigger asChild>
-          <button
-            className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-gray-100"
-            onClick={() => !socialIcon && setShowEmojiPicker(true)}
-          >
-            {socialIcon || <span className="text-lg">{emoji}</span>}
-          </button>
-        </PopoverTrigger>
-        {!socialIcon && (
-          <PopoverContent className="w-64 p-2">
-            <div className="grid grid-cols-5 gap-2">
-              {POPULAR_EMOJIS.map(emoji => (
-                <button
-                  key={emoji}
-                  onClick={() => handleEmojiSelect(emoji)}
-                  className="flex h-8 w-8 items-center justify-center rounded hover:bg-gray-100"
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          </PopoverContent>
-        )}
-      </Popover>
+      <EmojiPicker
+        currentEmoji={link.emoji}
+        onSelect={emoji => onUpdate(link.id, 'emoji', emoji)}
+        disabled={!!socialIcon}
+        icon={socialIcon}
+      />
 
       <div className="flex flex-1 flex-col gap-2">
         <input
@@ -157,7 +112,8 @@ export function LinkItem({
         <input
           type="url"
           value={link.url}
-          onChange={e => onUpdate(link.id, 'url', e.target.value)}
+          onChange={e => handleUrlChange(e.target.value)}
+          onBlur={e => handleUrlChange(e.target.value)}
           className="w-full rounded border-none bg-transparent px-2 py-1 text-sm text-gray-500 focus:ring-2 focus:ring-black"
           placeholder="https://"
         />

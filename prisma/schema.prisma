@@ -19,6 +19,61 @@ enum Theme {
   SLATE     // #475569 to #334155
 }
 
+enum ContentType {
+  LINK    // Regular link (default for migrated content)
+  TITLE   // Title box
+  DIVIDER // Divider line 
+  TEXT    // Description/text box
+}
+
+model Content {
+  id          String      @id @default(cuid())
+  type        ContentType @default(LINK)
+  title       String?
+  url         String?
+  text        String?
+  emoji       String?
+  order       Int         @default(0)
+  enabled     Boolean     @default(true)
+  clicks      Int         @default(0)
+  userId      String
+  user        User        @relation("UserContent", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Link {
+  id        String   @id @default(cuid())
+  title     String
+  url       String
+  order     Int      @default(0)
+  emoji     String?
+  enabled   Boolean  @default(true)
+  clicks    Int      @default(0)
+  userId    String
+  user      User     @relation("UserLinks", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  username      String?   @unique
+  theme         Theme     @default(YELLOW)
+  pageTitle     String?
+  pageDesc      String?
+  accounts      Account[]
+  sessions      Session[]
+  links         Link[]    @relation("UserLinks")
+  content       Content[] @relation("UserContent")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -44,37 +99,6 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  username      String?   @unique
-  theme         Theme     @default(YELLOW)
-  pageTitle     String?   // Custom page title
-  pageDesc      String?   // Custom page description
-  accounts      Account[]
-  sessions      Session[]
-  links         Link[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-}
-
-model Link {
-  id        String   @id @default(cuid())
-  title     String
-  url       String
-  order     Int      @default(0)
-  emoji     String?
-  enabled   Boolean  @default(true)
-  clicks    Int      @default(0)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model VerificationToken {
