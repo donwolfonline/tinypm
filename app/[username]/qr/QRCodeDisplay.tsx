@@ -63,7 +63,7 @@ export function QRCodeDisplay({ user }: QRCodeDisplayProps) {
               size={200}
               level="H"
               bgColor="transparent"
-              fgColor={themeConfig.buttonBg === 'bg-white' ? 'white' : 'black'}
+              fgColor={themeConfig.buttonBg === 'bg-white' ? 'black' : 'black'}
             />
           </div>
         </div>
