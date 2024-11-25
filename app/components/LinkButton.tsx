@@ -28,6 +28,8 @@ const SOCIAL_ICON_MAPPING: { [key: string]: string } = {
   'bsky.social': 'bluesky',
   'amzn.com': 'amazon',
   'amazon.com': 'amazon',
+  'csstats.gg': 'counter-strike',
+  'faceit.com': 'faceit',
 };
 
 type Props = {

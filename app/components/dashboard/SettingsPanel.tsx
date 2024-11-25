@@ -160,8 +160,15 @@ export function SettingsPanel({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50">
-      <div className={`absolute right-0 h-full w-96 bg-white p-6 ${themeConfig.buttonBorder}`}>
+    <div 
+      className="fixed inset-0 z-50 bg-black/50" 
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          handleClose();
+        }
+      }}
+    >
+      <div className={`absolute right-0 h-full w-full sm:w-96 bg-white p-6 ${themeConfig.buttonBorder}`}>
         <div className="flex h-full flex-col">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-200 pb-4">
