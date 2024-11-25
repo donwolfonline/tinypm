@@ -292,11 +292,11 @@ export default function DashboardPage() {
         </nav>
 
         {/* Main Content */}
-        <main className="mx-auto max-w-2xl px-4 pt-24">
+        <main className="mx-auto max-w-2xl px-4 pt-24 pb-16">
           <PreviewBanner username={session?.user?.username} theme={currentTheme} />
 
           {/* Content Section */}
-        <div className={`rounded-xl border-2 ${themeConfig.buttonBorder} bg-white p-6 shadow-lg`}>
+        <div className={`mb-4 rounded-xl border-2 ${themeConfig.buttonBorder} bg-white p-6 shadow-lg`}>
           <h2 className={`mb-6 text-xl font-bold ${themeConfig.buttonText}`}>Your Content</h2>
 
           <DragDropContext onDragEnd={onDragEnd}>

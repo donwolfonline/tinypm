@@ -180,7 +180,6 @@ export default async function UserPage(props: { params: PageParams }) {
         <ContentRenderer content={user.content} theme={userTheme} />
 
         {/* Footer */}
-        {/* Footer */}
         <div className="mt-12 text-center">
           <Link
             href="/"

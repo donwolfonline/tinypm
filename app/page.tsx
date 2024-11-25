@@ -2,6 +2,7 @@ import { Rocket, Link as LucideLink, Share2, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { HomeNav } from './components/HomeNav';
+import TestimonialGrid from './components/TestimonialGrid';
 
 export default function Home() {
   return (
@@ -72,21 +73,7 @@ export default function Home() {
       </section>
 
       {/* Social Proof Section */}
-      <section className="bg-[#FFE566] py-24">
-        <div className="mx-auto max-w-7xl px-4 text-center sm:px-6 lg:px-8">
-          <h2 className="mb-12 text-3xl font-bold text-black">Trusted by creators worldwide</h2>
-          <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
-            {[...Array(4)].map((_, i) => (
-              <div
-                key={i}
-                className="flex h-24 transform items-center justify-center rounded-lg border-2 border-black bg-white/90 shadow-lg transition-transform hover:-rotate-2"
-              >
-                <span className="font-medium text-black">Logo {i + 1}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <TestimonialGrid />
 
       {/* CTA Section */}
       <section className="bg-black py-24">
@@ -107,7 +94,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
       {/* Footer */}
       <footer className="border-t-2 border-black bg-[#FFCC00] py-12 text-black">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

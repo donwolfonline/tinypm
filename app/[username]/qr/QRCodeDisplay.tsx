@@ -90,20 +90,20 @@ export function QRCodeDisplay({ user }: QRCodeDisplayProps) {
 
       {/* Footer */}
       <div className="mt-12 text-center">
-        <Link
-          href="/"
-          className={`inline-flex items-center gap-2 text-sm ${themeConfig.subtext} hover:${themeConfig.text}`}
-        >
-          <Image
-            src="/images/goose.svg"
-            alt="TinyPM"
-            width={16}
-            height={16}
-            className="opacity-60"
-          />
-          tiny.pm
-        </Link>
-      </div>
+          <Link
+            href="/"
+            className={`inline-flex items-center gap-2 text-sm ${themeConfig.subtext} hover:${themeConfig.text} group transform transition-all duration-200 hover:-translate-y-1`}
+          >
+            <Image
+              src="/images/goose.svg"
+              alt="TinyPM"
+              width={16}
+              height={16}
+              className={`${themeConfig.text} opacity-60 transition-all duration-200 group-hover:scale-110 group-hover:opacity-100`}
+            />
+            <span>tiny.pm</span>
+          </Link>
+        </div>
     </div>
   );
 }
