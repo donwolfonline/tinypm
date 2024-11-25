@@ -1,6 +1,5 @@
 // components/ContentItems/LinkItem.tsx
-// components/ContentItems/LinkItem.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { GripVertical, X } from 'lucide-react';
 import {
   DraggableProvidedDragHandleProps,
@@ -9,34 +8,6 @@ import {
 import type { Link } from '@/types';
 import { EmojiPicker } from '../EmojiPicker';
 import { normalizeUrl } from '@/lib/url-utils';
-
-// Mapping of domains to Simple Icons slugs
-const SOCIAL_ICON_MAPPING: { [key: string]: string } = {
-  'github.com': 'github',
-  'twitter.com': 'x',
-  'x.com': 'x',
-  'instagram.com': 'instagram',
-  'facebook.com': 'facebook',
-  'linkedin.com': 'linkedin',
-  'youtube.com': 'youtube',
-  'twitch.tv': 'twitch',
-  'tiktok.com': 'tiktok',
-  'discord.com': 'discord',
-  'discord.gg': 'discord',
-  'spotify.com': 'spotify',
-  'medium.com': 'medium',
-  'dev.to': 'devdotto',
-  'producthunt.com': 'producthunt',
-  'dribbble.com': 'dribbble',
-  'behance.net': 'behance',
-  'steamcommunity.com': 'steam',
-  'bsky.app': 'bluesky',
-  'bsky.social': 'bluesky',
-  'amzn.com': 'amazon',
-  'amazon.com': 'amazon',
-  'csstats.gg': 'counter-strike',
-  'faceit.com': 'faceit',
-};
 
 interface LinkItemProps {
   link: Link;
@@ -48,6 +19,49 @@ interface LinkItemProps {
   forwardedRef: React.Ref<HTMLDivElement>;
 }
 
+// Helper function to get favicon URL
+const getFaviconUrl = (url: string) => {
+  try {
+    const hostname = new URL(url).hostname.replace('www.', '');
+    return `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${hostname}&size=32`;
+  } catch {
+    return null;
+  }
+};
+
+const FaviconWithFallback = ({ url }: { url: string }) => {
+  const [error, setError] = useState(false);
+  const faviconUrl = getFaviconUrl(url);
+
+  if (error || !faviconUrl) {
+    return (
+      <svg 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        stroke="currentColor" 
+        strokeWidth="2" 
+        strokeLinecap="round" 
+        strokeLinejoin="round" 
+        className="h-6 w-6 text-gray-400"
+      >
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+      </svg>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={`/api/proxy-image?url=${encodeURIComponent(faviconUrl)}`}
+      alt="Website icon"
+      className="h-6 w-6"
+      loading="eager"
+      onError={() => setError(true)}
+    />
+  );
+};
+
 export function LinkItem({
   link,
   dragHandleProps,
@@ -57,29 +71,6 @@ export function LinkItem({
   onDelete,
   forwardedRef,
 }: LinkItemProps) {
-  // Get social media icon if URL matches
-  const getSocialIcon = (url: string) => {
-    try {
-      const hostname = new URL(url).hostname.replace('www.', '');
-      const iconSlug = SOCIAL_ICON_MAPPING[hostname];
-      return iconSlug ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={`/api/proxy-image?url=${encodeURIComponent(
-            `https://cdn.simpleicons.org/${iconSlug}`
-          )}`}
-          alt={hostname}
-          className="h-6 w-6"
-          loading="eager"
-        />
-      ) : null;
-    } catch {
-      return null;
-    }
-  };
-
-  const socialIcon = link.url ? getSocialIcon(link.url) : null;
-
   const handleUrlChange = (newUrl: string) => {
     onUpdate(link.id, 'url', normalizeUrl(newUrl));
   };
@@ -99,8 +90,8 @@ export function LinkItem({
       <EmojiPicker
         currentEmoji={link.emoji}
         onSelect={emoji => onUpdate(link.id, 'emoji', emoji)}
-        disabled={!!socialIcon}
-        icon={socialIcon}
+        disabled={!!link.url}
+        icon={link.url ? <FaviconWithFallback url={link.url} /> : null}
       />
 
       <div className="flex flex-1 flex-col gap-2">

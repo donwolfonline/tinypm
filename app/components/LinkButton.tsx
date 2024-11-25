@@ -4,40 +4,55 @@ import { useState } from 'react';
 import { themes } from '@/lib/themes';
 import type { Theme } from '@/types';
 
-// Mapping of domains to Simple Icons slugs
-const SOCIAL_ICON_MAPPING: { [key: string]: string } = {
-  'github.com': 'github',
-  'twitter.com': 'x',
-  'x.com': 'x',
-  'instagram.com': 'instagram',
-  'facebook.com': 'facebook',
-  'linkedin.com': 'linkedin',
-  'youtube.com': 'youtube',
-  'twitch.tv': 'twitch',
-  'tiktok.com': 'tiktok',
-  'discord.com': 'discord',
-  'discord.gg': 'discord',
-  'spotify.com': 'spotify',
-  'medium.com': 'medium',
-  'dev.to': 'devdotto',
-  'producthunt.com': 'producthunt',
-  'dribbble.com': 'dribbble',
-  'behance.net': 'behance',
-  'steamcommunity.com': 'steam',
-  'bsky.app': 'bluesky',
-  'bsky.social': 'bluesky',
-  'amzn.com': 'amazon',
-  'amazon.com': 'amazon',
-  'csstats.gg': 'counter-strike',
-  'faceit.com': 'faceit',
-};
-
 type Props = {
   id: string;
   href: string;
   title: string;
   theme: Theme;
   emoji?: string | null;
+};
+
+// Helper function to get favicon URL
+const getFaviconUrl = (url: string) => {
+  try {
+    const hostname = new URL(url).hostname.replace('www.', '');
+    return `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${hostname}&size=32`;
+  } catch {
+    return null;
+  }
+};
+
+const FaviconWithFallback = ({ url }: { url: string; theme: Theme }) => {
+  const [error, setError] = useState(false);
+  const faviconUrl = getFaviconUrl(url);
+
+  if (error || !faviconUrl) {
+    return (
+      <svg 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        stroke="currentColor" 
+        strokeWidth="2" 
+        strokeLinecap="round" 
+        strokeLinejoin="round" 
+        className="h-5 w-5"
+      >
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+      </svg>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={`/api/proxy-image?url=${encodeURIComponent(faviconUrl)}`}
+      alt="Website icon"
+      className="h-5 w-5"
+      loading="eager"
+      onError={() => setError(true)}
+    />
+  );
 };
 
 export default function LinkButton({ id, href, title, theme, emoji }: Props) {
@@ -51,30 +66,6 @@ export default function LinkButton({ id, href, title, theme, emoji }: Props) {
       console.error('Error tracking click:', error);
     }
   };
-
-  const getSocialIcon = (url: string) => {
-    try {
-      const hostname = new URL(url).hostname.replace('www.', '');
-      const iconSlug = SOCIAL_ICON_MAPPING[hostname];
-      return iconSlug ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={`/api/proxy-image?url=${encodeURIComponent(
-            `https://cdn.simpleicons.org/${iconSlug}/${
-              themeConfig.buttonBg.includes('bg-black') ? 'ffffff' : '000000'
-            }`
-          )}`}
-          alt={hostname}
-          className="h-5 w-5"
-          loading="eager"
-        />
-      ) : null;
-    } catch {
-      return null;
-    }
-  };
-
-  const socialIcon = getSocialIcon(href);
 
   return (
     <a
@@ -92,7 +83,11 @@ export default function LinkButton({ id, href, title, theme, emoji }: Props) {
     >
       {/* Icon or Emoji */}
       <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center">
-        {socialIcon || (emoji && <span className="text-lg leading-none">{emoji}</span>)}
+        {href ? (
+          <FaviconWithFallback url={href} theme={theme} />
+        ) : (
+          emoji && <span className="text-lg leading-none">{emoji}</span>
+        )}
       </div>
 
       {/* Title */}
