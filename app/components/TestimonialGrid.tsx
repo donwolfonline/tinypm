@@ -11,29 +11,30 @@ type Testimonial = {
 
 const testimonials: Testimonial[] = [
   {
-    name: "Tarik Celik",
-    role: "Twitch Streamer",
-    quote: "tiny.pm gives me one link to share all my socials. It's awesome.",
-    image: "/images/people/tarikcelik.jpeg"
+    name: 'Tarik Celik',
+    role: 'Twitch Streamer',
+    quote: "Tarik doesn't use tinypm... yet!",
+    image: '/images/people/tarikcelik.jpeg',
   },
   {
-    name: "Zach Sims",
-    role: "Founder",
-    quote: "I was tired of the complexity of other link-in-bio tools. tiny.pm is simple and powerful.",
-    image: "/images/people/zsims.jpeg"
+    name: 'Zach Sims',
+    role: 'Founder',
+    quote:
+      'I was tired of the complexity of other link-in-bio tools. tiny.pm is simple and powerful.',
+    image: '/images/people/zsims.jpeg',
   },
   {
-    name: "ConnorJC",
-    role: "Beatsaber Pro, Map Designer",
-    quote: "Clean design and powerful analytics. Exactly what I needed.",
-    image: "/images/people/connorjc.jpg"
+    name: 'ConnorJC',
+    role: 'Beatsaber Mapper',
+    quote: 'Clean design and powerful analytics. Exactly what I needed.',
+    image: '/images/people/connorjc.jpg',
   },
   {
-    name: "You!",
-    role: "TinyPM User",
-    quote: "Perfect for managing my professional online presence.",
-    image: "/images/people/user.png"
-  }
+    name: 'You!',
+    role: 'TinyPM User',
+    quote: 'TinyPM is whatever you need it to be!',
+    image: '/images/people/user.png',
+  },
 ];
 
 export default function TestimonialGrid() {
@@ -67,7 +68,7 @@ export default function TestimonialGrid() {
               </div>
 
               <div className="mb-6 flex w-full items-center gap-4">
-                <div className="relative h-16 w-16 overflow-hidden rounded-lg border-2 border-black transform transition-transform group-hover:rotate-3">
+                <div className="relative h-16 w-16 transform overflow-hidden rounded-lg border-2 border-black transition-transform group-hover:rotate-3">
                   <Image
                     src={testimonial.image}
                     alt={testimonial.name}
@@ -82,13 +83,15 @@ export default function TestimonialGrid() {
                   </span>
                 </div>
               </div>
-              
-              <p className="text-left text-lg text-black/80 italic">
-                "{testimonial.quote}"
+
+              <p className="text-left text-lg italic text-black/80">
+                {'"'}
+                {testimonial.quote}
+                {'"'}
               </p>
 
               {/* Yellow accent bar */}
-              <div className="absolute bottom-0 left-6 right-6 h-1 bg-[#FFCC00] transform transition-all group-hover:scale-x-110" />
+              <div className="absolute bottom-0 left-6 right-6 h-1 transform bg-[#FFCC00] transition-all group-hover:scale-x-110" />
             </div>
           ))}
         </div>
