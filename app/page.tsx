@@ -1,3 +1,5 @@
+//tinypm/app/page.tsx
+
 import { Rocket, Link as LucideLink, Share2, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -105,6 +107,16 @@ export default function Home() {
                   <Link href="/examples" className="hover:underline">
                     Examples
                   </Link>
+                </li>
+                <li>
+                  <a
+                    href="https://status.tiny.pm"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:underline"
+                  >
+                    Site Status
+                  </a>
                 </li>
               </ul>
             </div>
