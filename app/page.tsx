@@ -104,6 +104,11 @@ export default function Home() {
               <h3 className="mb-4 font-bold">Product</h3>
               <ul className="flex flex-1 flex-col space-y-2">
                 <li>
+                  <Link href="/pricing" className="hover:underline">
+                    Pricing
+                  </Link>
+                </li>
+                <li>
                   <Link href="/examples" className="hover:underline">
                     Examples
                   </Link>

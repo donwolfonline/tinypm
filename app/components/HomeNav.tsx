@@ -38,29 +38,33 @@ export function HomeNav() {
             <span className="text-xl font-bold text-black">tiny.pm</span>
           </div>
           <div className="flex items-center space-x-4">
-            {session ? (
-              <>
-                <span key={session.user?.name} className="animate-fade-in text-black">
-                  Hello, {session.user?.name}
-                </span>
-                <button
-                  onClick={() => router.push('/dashboard')}
-                  className="rounded-lg bg-black px-4 py-2 text-[#FFCC00] transition-colors hover:bg-gray-900"
-                >
-                  Dashboard
-                </button>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="rounded-lg bg-black px-4 py-2 text-[#FFCC00] transition-colors hover:bg-gray-900"
-                >
-                  Get Started
-                </Link>
-              </>
-            )}
-          </div>
+ {!session && (
+   <>  
+     <Link href="/pricing" className="text-black hover:text-black/80">
+       Pricing
+     </Link>
+     <Link
+       href="/login"
+       className="rounded-lg bg-black px-4 py-2 text-[#FFCC00] transition-colors hover:bg-gray-900"
+     >
+       Get Started
+     </Link>
+   </>
+ )}
+ {session && (
+   <>
+     <span key={session.user?.name} className="animate-fade-in text-black">
+       Hello, {session.user?.name}
+     </span>
+     <button
+       onClick={() => router.push('/dashboard')}
+       className="rounded-lg bg-black px-4 py-2 text-[#FFCC00] transition-colors hover:bg-gray-900"
+     >
+       Dashboard
+     </button>
+   </>
+ )}
+</div>
         </div>
       </div>
     </nav>

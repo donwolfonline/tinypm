@@ -17,13 +17,45 @@ enum Theme {
   DAISY     // #FDFBF7 to #FFF9E5
   ROSE      // #FDF2F8 to #FBCFE8
   SLATE     // #475569 to #334155
+  
 }
 
 enum ContentType {
-  LINK    // Regular link (default for migrated content)
-  TITLE   // Title box
-  DIVIDER // Divider line 
-  TEXT    // Description/text box
+  LINK
+  TITLE
+  DIVIDER
+  TEXT
+}
+
+enum SubscriptionStatus {
+  ACTIVE     // Subscription is active and paid
+  PAST_DUE   // Payment failed but grace period active
+  CANCELED   // Subscription canceled but period not ended
+  EXPIRED    // Subscription ended
+}
+
+enum DomainStatus {
+  PENDING            // Initial state
+  DNS_VERIFICATION   // DNS records are being verified
+  ACTIVE             // Domain is verified and working
+  FAILED             // Verification failed
+  SUSPENDED          // Domain was suspended (e.g., abuse)
+}
+
+model Subscription {
+  id                 String            @id @default(cuid())
+  userId             String            @unique
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status             SubscriptionStatus
+  stripeSubscriptionId String          @unique  // Stripe subscription ID
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean          @default(false)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([status])
+  @@index([currentPeriodEnd])
 }
 
 model Content {
@@ -37,43 +69,69 @@ model Content {
   enabled     Boolean     @default(true)
   clicks      Int         @default(0)
   userId      String
-  user        User        @relation("UserContent", fields: [userId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([type])
 }
 
-model Link {
-  id        String   @id @default(cuid())
-  title     String
-  url       String
-  order     Int      @default(0)
-  emoji     String?
-  enabled   Boolean  @default(true)
-  clicks    Int      @default(0)
-  userId    String
-  user      User     @relation("UserLinks", fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model CustomDomain {
+  id                String       @id @default(cuid())
+  domain            String       @unique
+  userId            String
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status            DomainStatus @default(PENDING)
+  verificationCode  String       @unique
+  verificationAttempts Int       @default(0)
+  lastAttemptAt     DateTime?
+  verifiedAt        DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  primary           Boolean      @default(false)
+  errorMessage      String?      // Store last error message
+  cnameTarget       String       @default("tiny.pm") // Allows changing target if needed
+  
+  // Track subscription status
+  subscriptionId    String?      // Link to user's subscription
+  
+  @@index([userId])
+  @@index([domain])
+  @@index([status])
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  username      String?   @unique
-  theme         Theme     @default(YELLOW)
-  pageTitle     String?
-  pageDesc      String?
-  accounts      Account[]
-  sessions      Session[]
-  links         Link[]    @relation("UserLinks")
-  content       Content[] @relation("UserContent")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                 String         @id @default(cuid())
+  name               String?
+  email              String?        @unique
+  emailVerified      DateTime?
+  image              String?
+  username           String?        @unique
+  theme              Theme          @default(YELLOW)
+  pageTitle          String?
+  pageDesc           String?
+  
+  // Stripe-related fields
+  stripeCustomerId   String?        @unique  // Stripe customer ID
+  subscription       Subscription?  // One-to-one relation with active subscription
+  
+  // Relations
+  accounts           Account[]
+  sessions           Session[]
+  content            Content[]
+  customDomains      CustomDomain[]
+  
+  // Timestamps
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@index([username])
+  @@index([email])
+  @@index([stripeCustomerId])
 }
 
+// NextAuth.js models remain unchanged
 model Account {
   id                String  @id @default(cuid())
   userId            String
@@ -91,6 +149,7 @@ model Account {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model Session {
@@ -99,6 +158,8 @@ model Session {
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model VerificationToken {

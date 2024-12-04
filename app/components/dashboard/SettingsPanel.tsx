@@ -1,11 +1,14 @@
 // components/dashboard/SettingsPanel.tsx
-import { X, LogOut, XCircle, User } from 'lucide-react';
+import { X, LogOut, XCircle, User, Globe, ChevronRight } from 'lucide-react';
 import { Theme } from '@/types';
 import { themes } from '@/lib/themes';
 import ThemeSelector from './ThemeSelector';
 import { Session } from 'next-auth';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { ProxiedImage } from '../ProxiedImage';
+import { SubscriptionSection } from './SubscriptionSection';
+import type { Subscription } from '@prisma/client';
 
 interface PendingChanges {
   name?: string;
@@ -28,11 +31,12 @@ interface SettingsPanelProps {
   pageDesc: string;
   onPageTitleChange: (title: string) => void;
   onPageDescChange: (desc: string) => void;
-  displayPicture: string; // Add this
-  onDisplayPictureChange: (image: string) => void; // Add this
+  displayPicture: string;
+  onDisplayPictureChange: (image: string) => void;
   updateSession: () => Promise<Session | null>;
   setSaveStatus: (status: 'idle' | 'pending' | 'saving' | 'saved' | 'error') => void;
   setErrorMessage: (message: string) => void;
+  subscription?: Subscription | null;
 }
 
 export function SettingsPanel({
@@ -48,11 +52,12 @@ export function SettingsPanel({
   pageDesc,
   onPageTitleChange,
   onPageDescChange,
-  displayPicture, // Add this
-  onDisplayPictureChange, // Add this
+  displayPicture,
+  onDisplayPictureChange,
   updateSession,
   setSaveStatus,
   setErrorMessage,
+  subscription = null,
 }: SettingsPanelProps) {
   const themeConfig = themes[currentTheme];
   const [pendingChanges, setPendingChanges] = useState<PendingChanges>({});
@@ -160,15 +165,17 @@ export function SettingsPanel({
   if (!isOpen) return null;
 
   return (
-    <div 
-      className="fixed inset-0 z-50 bg-black/50" 
-      onClick={(e) => {
+    <div
+      className="fixed inset-0 z-50 bg-black/50"
+      onClick={e => {
         if (e.target === e.currentTarget) {
           handleClose();
         }
       }}
     >
-      <div className={`absolute right-0 h-full w-full sm:w-96 bg-white p-6 ${themeConfig.buttonBorder}`}>
+      <div
+        className={`absolute right-0 h-full w-full bg-white p-6 sm:w-96 ${themeConfig.buttonBorder}`}
+      >
         <div className="flex h-full flex-col">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-200 pb-4">
@@ -217,10 +224,10 @@ export function SettingsPanel({
                   onChange={e => handleLocalChange('name', e.target.value)}
                   className="w-full rounded-lg border border-gray-200 px-3 py-2"
                   placeholder="Your display name"
-                  style={{ 
-                    fontSize: '16px',  // Base size to prevent zoom
-                    transform: 'scale(0.875)',  // Scale down visually
-                    transformOrigin: 'left center' 
+                  style={{
+                    fontSize: '16px', // Base size to prevent zoom
+                    transform: 'scale(0.875)', // Scale down visually
+                    transformOrigin: 'left center',
                   }}
                 />
               </div>
@@ -241,10 +248,10 @@ export function SettingsPanel({
                     imageError ? 'border-red-300' : 'border-gray-200'
                   } px-3 py-2 pr-10`}
                   placeholder="Enter image URL (https://...)"
-                  style={{ 
-                    fontSize: '16px',  // Base size to prevent zoom
-                    transform: 'scale(0.875)',  // Scale down visually
-                    transformOrigin: 'left center' 
+                  style={{
+                    fontSize: '16px', // Base size to prevent zoom
+                    transform: 'scale(0.875)', // Scale down visually
+                    transformOrigin: 'left center',
                   }}
                 />
                 {localImage && (
@@ -283,10 +290,10 @@ export function SettingsPanel({
                     onChange={e => handleLocalChange('pageTitle', e.target.value)}
                     className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2"
                     placeholder="Custom page title (optional)"
-                    style={{ 
-                      fontSize: '16px',  // Base size to prevent zoom
-                      transform: 'scale(0.875)',  // Scale down visually
-                      transformOrigin: 'left center' 
+                    style={{
+                      fontSize: '16px', // Base size to prevent zoom
+                      transform: 'scale(0.875)', // Scale down visually
+                      transformOrigin: 'left center',
                     }}
                   />
                   <p className="mt-1 text-xs text-gray-500">Leave blank to use default</p>
@@ -307,6 +314,52 @@ export function SettingsPanel({
 
             {/* Theme Selector */}
             <ThemeSelector currentTheme={localTheme} onThemeChange={handleLocalThemeChange} />
+
+            <SubscriptionSection subscription={subscription ?? null} />
+
+            {subscription?.status === 'ACTIVE' ? (
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="mb-4 font-medium">Custom Domain</h3>
+                <Link
+                  href="/dashboard/domains"
+                  className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:bg-gray-50"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-lg bg-gray-100 p-2">
+                      <Globe className="h-5 w-5 text-gray-600" />
+                    </div>
+                    <div>
+                      <div className="font-medium">Manage Custom Domain</div>
+                      <div className="text-sm text-gray-500">
+                        Connect your own domain to your profile
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-gray-400" />
+                </Link>
+              </div>
+            ) : (
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="mb-4 font-medium">Custom Domain</h3>
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-lg bg-gray-200 p-2">
+                      <Globe className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-600">Custom Domains</div>
+                      <div className="text-sm text-gray-500">Available with Pro plan</div>
+                    </div>
+                  </div>
+                  <Link
+                    href="/dashboard?upgrade=true"
+                    className="mt-3 block w-full rounded-lg bg-black px-4 py-2 text-center text-sm font-medium text-[#FFCC00]"
+                  >
+                    Upgrade to Pro
+                  </Link>
+                </div>
+              </div>
+            )}
 
             {/* Danger Zone */}
             <div className="border-t border-gray-200 pt-6">

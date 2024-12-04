@@ -67,97 +67,148 @@ const reservedUsernames = new Set([
   '_tiny',
 ]);
 
-// Additional validation rules
-const containsOffensiveContent = (username: string): boolean => {
+function validateUsername(username: string): { isValid: boolean; error?: string } {
+  // Basic validation
+  if (!username || typeof username !== 'string') {
+    return { isValid: false, error: 'Username is required' };
+  }
+
+  // Format validation
+  const usernameRegex = /^[a-zA-Z0-9][a-zA-Z0-9_-]{1,18}[a-zA-Z0-9]$/;
+  if (!usernameRegex.test(username)) {
+    return { 
+      isValid: false, 
+      error: 'Username must be 3-20 characters long, start and end with a letter or number, and can only contain letters, numbers, underscores, and hyphens'
+    };
+  }
+
+  // Consecutive special characters
+  if (username.match(/[_-]{2,}/)) {
+    return { 
+      isValid: false, 
+      error: 'Username cannot contain consecutive special characters' 
+    };
+  }
+
+  // Reserved usernames
+  if (reservedUsernames.has(username.toLowerCase())) {
+    return { isValid: false, error: 'This username is reserved' };
+  }
+
+  // Offensive content check
+  if (containsOffensiveContent(username)) {
+    return { 
+      isValid: false, 
+      error: 'This username contains inappropriate content' 
+    };
+  }
+
+  return { isValid: true };
+}
+
+function containsOffensiveContent(username: string): boolean {
   const normalized = username.toLowerCase();
 
-  // Use bad-words filter
-  if (filter.isProfane(normalized)) {
-    return true;
-  }
+  if (filter.isProfane(normalized)) return true;
 
-  // Check for common impersonation patterns
-  if (
-    normalized.match(/(official|real|true|actual)_.+/i) ||
-    normalized.match(/.+_(official|support|team)/i)
-  ) {
-    return true;
-  }
+  // Impersonation patterns
+  const impersonationPatterns = [
+    /(official|real|true|actual)_.+/i,
+    /.+_(official|support|team)/i,
+    /[0-9]+_(admin|mod|staff)/i
+  ];
 
-  // Check for common admin/mod impersonation patterns
-  if (normalized.match(/[0-9]+_(admin|mod|staff)/i)) {
-    return true;
-  }
-
-  return false;
-};
+  return impersonationPatterns.some(pattern => pattern.test(normalized));
+}
 
 export async function POST(req: Request) {
   try {
+    // Authentication check
     const session = await getAuthSession();
-
     if (!session?.user?.email) {
-      return NextResponse.json({ error: 'You must be logged in' }, { status: 401 });
-    }
-
-    const { username } = await req.json();
-
-    // Basic validation
-    if (!username) {
-      return NextResponse.json({ error: 'Username is required' }, { status: 400 });
-    }
-
-    // Username format validation - more restrictive regex
-    const usernameRegex = /^[a-zA-Z0-9][a-zA-Z0-9_-]{1,18}[a-zA-Z0-9]$/;
-    if (!usernameRegex.test(username)) {
       return NextResponse.json(
-        {
-          error:
-            'Username must be 3-20 characters long, start and end with a letter or number, and can only contain letters, numbers, underscores, and hyphens',
-        },
-        { status: 400 }
+        { error: 'You must be logged in' },
+        { 
+          status: 401,
+          headers: { 'Content-Type': 'application/json' }
+        }
       );
     }
 
-    // Check maximum consecutive special characters
-    if (username.match(/[_-]{2,}/)) {
+    // Safe request body parsing
+    let body;
+    try {
+      body = await req.json();
+    } catch (e) {
       return NextResponse.json(
-        { error: 'Username cannot contain consecutive special characters' },
-        { status: 400 }
+        { error: 'Invalid request format' },
+        { 
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        }
       );
     }
 
-    // Check reserved usernames
-    if (reservedUsernames.has(username.toLowerCase())) {
-      return NextResponse.json({ error: 'This username is reserved' }, { status: 400 });
-    }
+    const { username } = body;
 
-    // Check for offensive content
-    if (containsOffensiveContent(username)) {
+    // Validate username
+    const validation = validateUsername(username);
+    if (!validation.isValid) {
       return NextResponse.json(
-        { error: 'This username contains inappropriate content' },
-        { status: 400 }
+        { error: validation.error },
+        { 
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        }
       );
     }
 
-    // Check if username exists
+    // Check for existing username
     const existingUser = await prisma.user.findUnique({
       where: { username },
     });
 
     if (existingUser) {
-      return NextResponse.json({ error: 'Username is already taken' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Username is already taken' },
+        { 
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
     }
 
-    // Update the user with the new username
+    // Update user
     const updatedUser = await prisma.user.update({
       where: { email: session.user.email },
       data: { username },
     });
 
-    return NextResponse.json(updatedUser);
+    return NextResponse.json(
+      updatedUser,
+      { 
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+
   } catch (error) {
-    console.error('Username registration error:', error);
-    return NextResponse.json({ error: 'Failed to register username' }, { status: 500 });
+    // Structured error logging
+    console.error('Username registration error:', {
+      error: error instanceof Error ? {
+        message: error.message,
+        name: error.name,
+        stack: error.stack
+      } : error,
+      timestamp: new Date().toISOString()
+    });
+
+    return NextResponse.json(
+      { error: 'Failed to register username' },
+      { 
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
   }
 }

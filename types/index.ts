@@ -12,6 +12,19 @@ export interface Link {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface CustomDomain {
+  id: string;
+  domain: string;
+  userId: string;
+  status: 'PENDING' | 'DNS_VERIFICATION' | 'ACTIVE' | 'FAILED' | 'SUSPENDED';
+  verificationCode: string;
+  verifiedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  primary: boolean;
+}
+
 export type ContentType = 'LINK' | 'TITLE' | 'DIVIDER' | 'TEXT';
 
 interface BaseContent {
