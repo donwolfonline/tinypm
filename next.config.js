@@ -33,16 +33,15 @@ const nextConfig = {
   async rewrites() {
     return {
       beforeFiles: [
-        // Handle custom domain requests
         {
           source: '/:path*',
           has: [
             {
               type: 'host',
-              value: '(?!tiny\\.pm|localhost).*',  // Match any non-primary domain
+              value: '(?!tiny\\.pm|localhost).*',
             },
           ],
-          destination: '/api/proxy/:path*',  // Route through our proxy handler
+          destination: '/api/proxy/:path*',
         },
       ],
     };
