@@ -1,47 +1,51 @@
-// app/api/domains/verify/route.ts
+// app/api/verify-domain/route.ts
+import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-export async function GET(request: Request) {
-    try {
-        const host = request.headers.get('host');
-        if (!host) {
-            return new Response(null, { status: 400 });
-        }
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const domain = searchParams.get('domain');
 
-        // Always allow development domains
-        if (process.env.NODE_ENV === 'development' && 
-            (host.includes('localhost') || 
-             host.includes('127.0.0.1') || 
-             host.endsWith('.tiny.pm:3131'))) {
-            return new Response(null, { status: 200 });
-        }
+  if (!domain) {
+    return new NextResponse('no', { status: 200 });
+  }
 
-        // Strip port number if present (common in development)
-        const cleanHost = host.split(':')[0];
+  // Always allow development domains
+  if (
+    process.env.NODE_ENV === 'development' &&
+    (domain.includes('localhost') ||
+      domain.includes('127.0.0.1') ||
+      domain.endsWith('.tiny.pm'))
+  ) {
+    return new NextResponse('yes', { status: 200 });
+  }
 
-        // Allow the main domain and its subdomains
-        if (cleanHost === 'tiny.pm' || cleanHost.endsWith('.tiny.pm')) {
-            return new Response(null, { status: 200 });
-        }
+  // Allow the main domain and its subdomains
+  if (domain === 'tiny.pm' || domain.endsWith('.tiny.pm')) {
+    return new NextResponse('yes', { status: 200 });
+  }
 
-        // Check custom domains
-        const domain = await prisma.customDomain.findFirst({
-            where: {
-                domain: cleanHost,
-                status: 'ACTIVE',
-            },
-        });
+  try {
+    // Check custom domains
+    const customDomain = await prisma.customDomain.findFirst({
+      where: {
+        domain,
+        status: 'ACTIVE', // Ensure the domain is verified and active
+      },
+    });
 
-        // Log verification attempts in development
-        if (process.env.NODE_ENV === 'development') {
-            console.log(`Domain verification attempt for ${cleanHost}: ${domain ? 'Found' : 'Not Found'}`);
-        }
-
-        return new Response(null, { 
-            status: domain ? 200 : 404 
-        });
-    } catch (error) {
-        console.error('Domain verification error:', error);
-        return new Response(null, { status: 500 });
+    // Log verification attempts in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log(
+        `Domain verification attempt for ${domain}: ${
+          customDomain ? 'Found' : 'Not Found'
+        }`
+      );
     }
+
+    return new NextResponse(customDomain ? 'yes' : 'no', { status: 200 });
+  } catch (error) {
+    console.error('Domain verification error:', error);
+    return new NextResponse('no', { status: 200 });
+  }
 }
