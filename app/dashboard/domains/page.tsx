@@ -132,7 +132,7 @@ export default function DomainsPage() {
     return {
       type: 'CNAME',
       name: recordName,
-      value: 'cname.tiny.pm', // We should have a dedicated CNAME record for verification
+      value: 'tiny.pm',
     };
   }
 
