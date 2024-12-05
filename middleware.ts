@@ -44,7 +44,17 @@ function cleanHostname(hostname: string): string {
 }
 
 export async function middleware(request: NextRequest) {
-  // Early return for public paths to avoid unnecessary processing
+  // Add API request logging
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    console.log('[API Request]', {
+      method: request.method,
+      path: request.nextUrl.pathname,
+      host: request.headers.get('host'),
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  // Early return for public paths (including API routes)
   if (isPublicPath(request.nextUrl.pathname)) {
     return NextResponse.next();
   }
@@ -94,7 +104,9 @@ export async function middleware(request: NextRequest) {
  */
 export const config = {
   matcher: [
-    // Match all paths except static files and API routes
-    '/((?!api|_next|static|.*\\..*|favicon.ico).*)',
+    // Match all paths except static files
+    '/((?!_next|static|.*\\..*|favicon.ico).*)',
+    // Explicitly include API routes
+    '/api/:path*'
   ],
 };

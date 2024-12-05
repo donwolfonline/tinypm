@@ -1,7 +1,7 @@
 // app/dashboard/domains/page.tsx
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Globe,
@@ -29,52 +29,41 @@ export default function DomainsPage() {
   // Add loading state
   const [isLoading, setIsLoading] = useState(true);
 
+  // Modify your addDomain function to include logging
   const addDomain = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newDomain.trim()) return;
-
+  
     setIsAdding(true);
     setError(null);
-
+  
+    console.log('[Domains Page] Adding new domain:', newDomain);
+  
     try {
       const response = await fetch('/api/domains', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ domain: newDomain.trim() }),
       });
-
+  
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.error || 'Failed to add domain');
       }
-
+  
       const domain = await response.json();
+      console.log('[Domains Page] Domain added successfully:', domain);
+      
       setDomains(prev => [...prev, domain]);
       setNewDomain('');
       setActiveVerification(domain.id);
     } catch (error) {
-      console.error('Error adding domain:', error);
+      console.error('[Domains Page] Error adding domain:', error);
       setError(error instanceof Error ? error.message : 'Failed to add domain');
     } finally {
       setIsAdding(false);
     }
   };
-
-  const verifyDomain = useCallback(async (id: string) => {
-    try {
-      const response = await fetch(`/api/domains/${id}/verify`, { method: 'POST' });
-      if (!response.ok) throw new Error('Verification failed');
-
-      const updatedDomain = await response.json();
-      setDomains(prev => prev.map(d => (d.id === id ? updatedDomain : d)));
-
-      if (updatedDomain.status === 'ACTIVE') {
-        setActiveVerification(null);
-      }
-    } catch (error) {
-      console.error('Error verifying domain:', error);
-    }
-  }, []);
 
   const deleteDomain = async (id: string) => {
     if (!confirm('Are you sure you want to delete this domain?')) return;
@@ -136,6 +125,19 @@ export default function DomainsPage() {
     };
   }
 
+  useEffect(() => {
+    // Log when verification state changes
+    console.log('[Domains Page] Verification state changed:', {
+      activeVerification,
+      domains: domains.map(d => ({
+        id: d.id,
+        domain: d.domain,
+        status: d.status
+      }))
+    });
+  }, [activeVerification, domains]);
+
+
   // Fetch existing domains and subscription
   useEffect(() => {
     const fetchData = async () => {
@@ -186,60 +188,50 @@ export default function DomainsPage() {
   }, [status, router]);
 
   useEffect(() => {
-    const VERIFICATION_POLL_INTERVAL = 10000; // 10 seconds
-    const MAX_ATTEMPTS = 30; // 5 minutes maximum polling time
-    let attempts = 0;
-    let intervalId: NodeJS.Timeout | null = null;
-
+    const VERIFICATION_POLL_INTERVAL = 10000;
+    
     async function pollDomainStatus() {
-      if (!activeVerification) {
+      const domain = domains.find(d => d.id === activeVerification);
+      if (!domain || domain.status !== 'DNS_VERIFICATION') {
         return;
       }
-
+  
       try {
-        const domain = domains.find(d => d.id === activeVerification);
-
-        // Check domain validity and verification status
-        if (!domain || domain.status !== 'DNS_VERIFICATION' || attempts >= MAX_ATTEMPTS) {
-          setActiveVerification(null);
-          // Clear interval if we hit max attempts or invalid state
-          if (intervalId) {
-            clearInterval(intervalId);
+        console.log(`[Domain Poll] Attempting verification for domain: ${domain.domain}`);
+        const response = await fetch(`/api/domains/${domain.id}/verify`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
           }
-          return;
+        });
+  
+        if (!response.ok) {
+          throw new Error(`Verification failed: ${response.statusText}`);
         }
-
-        await verifyDomain(domain.id);
-        attempts++;
-
-        if (process.env.NODE_ENV === 'development') {
-          console.log(`Verification attempt ${attempts}/${MAX_ATTEMPTS}`);
+  
+        const updatedDomain = await response.json();
+        console.log('[Domain Poll] Verification response:', updatedDomain);
+  
+        setDomains(prev => prev.map(d => 
+          d.id === domain.id ? updatedDomain : d
+        ));
+  
+        if (updatedDomain.status === 'ACTIVE') {
+          setActiveVerification(null);
         }
       } catch (error) {
-        console.error('Domain verification failed:', error);
-        attempts++;
-
-        if (attempts >= MAX_ATTEMPTS) {
-          setActiveVerification(null);
-          // Clear interval on max attempts
-          if (intervalId) {
-            clearInterval(intervalId);
-          }
-        }
+        console.error('[Domain Poll] Verification error:', error);
       }
     }
-
-    // Always set up the polling mechanism, but only execute if activeVerification exists
-    pollDomainStatus(); // Initial check
-    intervalId = setInterval(pollDomainStatus, VERIFICATION_POLL_INTERVAL);
-
-    // Cleanup function always returns
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [activeVerification, domains, verifyDomain]);
+  
+    if (activeVerification) {
+      const intervalId = setInterval(pollDomainStatus, VERIFICATION_POLL_INTERVAL);
+      // Initial check
+      pollDomainStatus();
+  
+      return () => clearInterval(intervalId);
+    }
+  }, [activeVerification, domains]);
 
   // Show loading state while checking subscription
   if (isLoading) {
