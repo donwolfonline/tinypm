@@ -4,27 +4,49 @@ import { getAuthSession } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import dns from 'dns/promises';
 
-const VERIFICATION_COOLDOWN = 5 * 60 * 1000; // 5 minutes
-const MAX_VERIFICATION_ATTEMPTS = 5;
+// Constants for verification settings
+const VERIFICATION_SETTINGS = {
+  COOLDOWN_MS: 5 * 60 * 1000,        // 5 minute cooldown between attempts
+  MAX_ATTEMPTS: 5,                    // Maximum verification attempts allowed
+  DNS_TIMEOUT_MS: 10000,             // DNS resolution timeout (10s)
+  ALLOWED_STATUS_TRANSITIONS: new Set(['PENDING', 'DNS_VERIFICATION', 'FAILED']), // Valid status transitions
+} as const;
+
+// Type guard for DNS errors
+function isDnsError(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error && 'code' in error;
+}
+
+// Helper to format DNS error messages for users
+function formatDnsError(error: NodeJS.ErrnoException): string {
+  const errorMessages: Record<string, string> = {
+    ENODATA: 'No DNS records found. Please ensure you have added the CNAME record.',
+    ENOTFOUND: 'Domain not found. Please check if the domain exists and try again.',
+    ETIMEOUT: 'DNS lookup timed out. Please try again in a few minutes.',
+    ESERVFAIL: 'DNS server error. Please check your DNS configuration.',
+  };
+
+  return errorMessages[error.code ?? ''] || 'DNS verification failed. Please check your configuration.';
+}
 
 export async function POST(request: NextRequest) {
   try {
+    // Authentication check
     const session = await getAuthSession();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Extract the dynamic route parameter from the request URL
+    // Extract and validate domain ID from URL
     const pathParts = request.nextUrl.pathname.split('/');
     const idIndex = pathParts.length - 2;
     const id = pathParts[idIndex];
 
-    // Ensure the extracted ID is not undefined
-    if (!id) {
+    if (!id?.trim()) {
       return NextResponse.json({ error: 'Invalid domain ID' }, { status: 400 });
     }
 
-    // Fetch domain with user check for security
+    // Fetch domain with related data in a single query
     const domain = await prisma.customDomain.findFirst({
       where: {
         id,
@@ -32,19 +54,23 @@ export async function POST(request: NextRequest) {
       },
       include: {
         user: {
-          include: {
-            subscription: true,
+          select: {
+            subscription: {
+              select: {
+                status: true,
+              },
+            },
           },
         },
       },
     });
 
+    // Comprehensive domain validation
     if (!domain) {
       return NextResponse.json({ error: 'Domain not found' }, { status: 404 });
     }
 
-    // Verify subscription status
-    if (domain.user.subscription?.status !== 'ACTIVE') {
+    if (!domain.user.subscription || domain.user.subscription.status !== 'ACTIVE') {
       return NextResponse.json(
         {
           error: 'Active subscription required',
@@ -54,30 +80,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check verification attempt cooldown
+    // Validate current domain status
+    if (!VERIFICATION_SETTINGS.ALLOWED_STATUS_TRANSITIONS.has(domain.status)) {
+      return NextResponse.json(
+        {
+          error: 'Domain cannot be verified in its current state',
+          code: 'INVALID_STATE',
+        },
+        { status: 400 }
+      );
+    }
+
+    // Rate limiting and attempt tracking
     if (domain.lastAttemptAt) {
-      const timeSinceLastAttempt = Date.now() - domain.lastAttemptAt.getTime();
-      if (timeSinceLastAttempt < VERIFICATION_COOLDOWN) {
-        const remainingCooldown = Math.ceil(
-          (VERIFICATION_COOLDOWN - timeSinceLastAttempt) / 1000
-        );
+      const cooldownRemaining = VERIFICATION_SETTINGS.COOLDOWN_MS - 
+        (Date.now() - domain.lastAttemptAt.getTime());
+      
+      if (cooldownRemaining > 0) {
+        const remainingSeconds = Math.ceil(cooldownRemaining / 1000);
         return NextResponse.json(
           {
-            error: `Please wait ${remainingCooldown} seconds before retrying`,
+            error: `Please wait ${remainingSeconds} seconds before retrying`,
             code: 'RATE_LIMITED',
+            remainingSeconds,
           },
           {
             status: 429,
             headers: {
-              'Retry-After': remainingCooldown.toString(),
+              'Retry-After': remainingSeconds.toString(),
             },
           }
         );
       }
     }
 
-    // Check maximum attempts
-    if (domain.verificationAttempts >= MAX_VERIFICATION_ATTEMPTS) {
+    if (domain.verificationAttempts >= VERIFICATION_SETTINGS.MAX_ATTEMPTS) {
       return NextResponse.json(
         {
           error: 'Maximum verification attempts exceeded. Please contact support.',
@@ -87,7 +124,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update attempt counter and timestamp
+    // Update attempt tracking before verification
     await prisma.customDomain.update({
       where: { id },
       data: {
@@ -98,28 +135,36 @@ export async function POST(request: NextRequest) {
     });
 
     try {
-      // Verify CNAME record
-      const records = await dns.resolveCname(domain.domain);
+      // Set up DNS resolution with timeout
+      const dnsPromise = dns.resolveCname(domain.domain);
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('DNS lookup timed out')), 
+          VERIFICATION_SETTINGS.DNS_TIMEOUT_MS);
+      });
 
+      // Race between DNS resolution and timeout
+      const records = await Promise.race([dnsPromise, timeoutPromise]) as string[];
+
+      // Validate CNAME record
       if (!records.includes(domain.cnameTarget)) {
         await prisma.customDomain.update({
           where: { id },
           data: {
             status: 'FAILED',
-            errorMessage: `CNAME record should point to ${domain.cnameTarget}`,
+            errorMessage: `CNAME record must point to ${domain.cnameTarget}`,
           },
         });
 
         return NextResponse.json(
           {
-            error: `CNAME record should point to ${domain.cnameTarget}`,
-            code: 'DNS_ERROR',
+            error: `Invalid CNAME configuration. Expected ${domain.cnameTarget}`,
+            code: 'INVALID_CNAME',
           },
           { status: 400 }
         );
       }
 
-      // DNS verification successful
+      // Success case - update domain status
       const verifiedDomain = await prisma.customDomain.update({
         where: { id },
         data: {
@@ -130,12 +175,12 @@ export async function POST(request: NextRequest) {
       });
 
       return NextResponse.json(verifiedDomain);
-    } catch (dnsError) {
-      // Handle DNS resolution failures
-      const errorMessage =
-        dnsError instanceof Error
-          ? `DNS verification failed: ${dnsError.message}`
-          : 'DNS verification failed';
+
+    } catch (error) {
+      // Handle DNS-specific errors
+      const errorMessage = isDnsError(error) 
+        ? formatDnsError(error)
+        : 'DNS verification failed';
 
       await prisma.customDomain.update({
         where: { id },
@@ -153,12 +198,19 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
   } catch (error) {
-    console.error('Domain verification error:', error);
+    // Log error with request context for debugging
+    console.error('Domain verification error:', {
+      error,
+      requestId: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+    });
+
     return NextResponse.json(
       {
         error: 'An unexpected error occurred during domain verification',
-        requestId: crypto.randomUUID(),
+        code: 'INTERNAL_ERROR',
       },
       { status: 500 }
     );

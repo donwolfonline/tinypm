@@ -2,7 +2,16 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Globe, Plus, ExternalLink, Trash2, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  Globe,
+  Plus,
+  ExternalLink,
+  Trash2,
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -55,10 +64,10 @@ export default function DomainsPage() {
     try {
       const response = await fetch(`/api/domains/${id}/verify`, { method: 'POST' });
       if (!response.ok) throw new Error('Verification failed');
-      
+
       const updatedDomain = await response.json();
-      setDomains(prev => prev.map(d => d.id === id ? updatedDomain : d));
-      
+      setDomains(prev => prev.map(d => (d.id === id ? updatedDomain : d)));
+
       if (updatedDomain.status === 'ACTIVE') {
         setActiveVerification(null);
       }
@@ -115,16 +124,28 @@ export default function DomainsPage() {
     }
   };
 
+  function getDnsInstructions(domain: string) {
+    // Extract subdomain if present
+    const isSubdomain = domain.split('.').length > 2;
+    const recordName = isSubdomain ? domain.split('.')[0] : '@';
+
+    return {
+      type: 'CNAME',
+      name: recordName,
+      value: 'cname.tiny.pm', // We should have a dedicated CNAME record for verification
+    };
+  }
+
   // Fetch existing domains and subscription
   useEffect(() => {
     const fetchData = async () => {
       if (status === 'loading') return;
-      
+
       try {
         setIsLoading(true);
         const [domainsResponse, subscriptionResponse] = await Promise.all([
           fetch('/api/domains'),
-          fetch('/api/subscription')
+          fetch('/api/subscription'),
         ]);
 
         if (!domainsResponse.ok || !subscriptionResponse.ok) {
@@ -133,12 +154,12 @@ export default function DomainsPage() {
 
         const [domainsData, subscriptionData] = await Promise.all([
           domainsResponse.json(),
-          subscriptionResponse.json()
+          subscriptionResponse.json(),
         ]);
 
         setDomains(domainsData.domains);
         setSubscription(subscriptionData.subscription);
-        
+
         // Check subscription status only after we have the data
         if (subscriptionData.subscription?.status !== 'ACTIVE') {
           router.push('/dashboard?upgrade=true');
@@ -169,15 +190,15 @@ export default function DomainsPage() {
     const MAX_ATTEMPTS = 30; // 5 minutes maximum polling time
     let attempts = 0;
     let intervalId: NodeJS.Timeout | null = null;
-    
+
     async function pollDomainStatus() {
       if (!activeVerification) {
         return;
       }
-  
+
       try {
         const domain = domains.find(d => d.id === activeVerification);
-        
+
         // Check domain validity and verification status
         if (!domain || domain.status !== 'DNS_VERIFICATION' || attempts >= MAX_ATTEMPTS) {
           setActiveVerification(null);
@@ -187,17 +208,17 @@ export default function DomainsPage() {
           }
           return;
         }
-  
+
         await verifyDomain(domain.id);
         attempts++;
-  
+
         if (process.env.NODE_ENV === 'development') {
           console.log(`Verification attempt ${attempts}/${MAX_ATTEMPTS}`);
         }
       } catch (error) {
         console.error('Domain verification failed:', error);
         attempts++;
-        
+
         if (attempts >= MAX_ATTEMPTS) {
           setActiveVerification(null);
           // Clear interval on max attempts
@@ -207,11 +228,11 @@ export default function DomainsPage() {
         }
       }
     }
-  
+
     // Always set up the polling mechanism, but only execute if activeVerification exists
     pollDomainStatus(); // Initial check
     intervalId = setInterval(pollDomainStatus, VERIFICATION_POLL_INTERVAL);
-  
+
     // Cleanup function always returns
     return () => {
       if (intervalId) {
@@ -223,16 +244,15 @@ export default function DomainsPage() {
   // Show loading state while checking subscription
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#FFCC00] flex items-center justify-center">
-        <div className="flex items-center gap-2 bg-white rounded-lg p-4 shadow-lg">
+      <div className="flex min-h-screen items-center justify-center bg-[#FFCC00]">
+        <div className="flex items-center gap-2 rounded-lg bg-white p-4 shadow-lg">
           <Loader2 className="h-5 w-5 animate-spin" />
           <span>Loading...</span>
         </div>
       </div>
     );
   }
-  
-  
+
   return (
     <div className="min-h-screen bg-[#FFCC00]">
       <div className="mx-auto max-w-4xl px-4 py-8">
@@ -347,18 +367,19 @@ export default function DomainsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-t border-gray-200">
-                      <td className="px-4 py-2 font-mono">CNAME</td>
-                      <td className="px-4 py-2 font-mono">@</td>
-                      <td className="px-4 py-2 font-mono">tiny.pm</td>
-                    </tr>
+                    {domains.map(domain => {
+                      const instructions = getDnsInstructions(domain.domain);
+                      return (
+                        <tr key={domain.id} className="border-t border-gray-200">
+                          <td className="px-4 py-2 font-mono">{instructions.type}</td>
+                          <td className="px-4 py-2 font-mono">{instructions.name}</td>
+                          <td className="px-4 py-2 font-mono">{instructions.value}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
-              <p className="mt-4 text-sm text-gray-500">
-                DNS changes can take up to 48 hours to propagate. We&apos;ll automatically check the
-                configuration every few minutes.
-              </p>
             </div>
           )}
         </div>
