@@ -1,5 +1,5 @@
 // lib/subscription.ts
-import { stripeConfig } from './config/stripe';
+import { getStripePrice } from './config/stripe';
 
 /**
  * Type definitions for subscription plans and intervals
@@ -28,7 +28,7 @@ const isDev = process.env.NODE_ENV === 'development';
 export const SUBSCRIPTION_PLANS: SubscriptionPlans = {
   MONTHLY: {
     name: 'Premium Monthly',
-    priceId: isDev ? 'dev_monthly' : stripeConfig.prices.premiumMonthly,
+    priceId: isDev ? 'dev_monthly' : getStripePrice('premiumMonthly'),
     interval: 'month',
     amount: 9,
     features: [
@@ -40,7 +40,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlans = {
   },
   YEARLY: {
     name: 'Premium Yearly',
-    priceId: isDev ? 'dev_yearly' : stripeConfig.prices.premiumYearly,
+    priceId: isDev ? 'dev_yearly' : getStripePrice('premiumYearly'),
     interval: 'year',
     amount: 90,
     features: [

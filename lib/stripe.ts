@@ -1,19 +1,8 @@
 // lib/stripe.ts
-import Stripe from 'stripe';
+import { stripe, getStripePrice, getURL } from './config/stripe';
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-11-20.acacia' as const,
-  typescript: true,
-});
+export { stripe, getStripePrice, getURL };
 
-// Generate absolute URLs for Stripe redirects
-export function getURL() {
-  let url = process?.env?.NEXT_PUBLIC_SITE_URL ?? 
-    process?.env?.NEXT_PUBLIC_VERCEL_URL ?? 
-    'http://dev.tiny.pm:3131/';
-  
-  url = url.includes('http') ? url : `https://${url}`;
-  url = url.charAt(url.length - 1) === '/' ? url : `${url}/`;
-  
-  return url;
-}
+// If you need direct access to the config values:
+export const PREMIUM_MONTHLY_PRICE = getStripePrice('premiumMonthly');
+export const PREMIUM_YEARLY_PRICE = getStripePrice('premiumYearly');
