@@ -1,36 +1,49 @@
 // lib/subscription.ts
-import { getStripePrice } from './config/stripe';
+import { getStripePrice } from './config/client-stripe';
 
-/**
- * Type definitions for subscription plans and intervals
- */
 export type SubscriptionInterval = 'month' | 'year';
+export type SubscriptionStatus = 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'EXPIRED';
 
 interface SubscriptionPlan {
-  name: string;
-  priceId: string;
-  interval: SubscriptionInterval;
-  amount: number;
-  features?: string[];
+  readonly name: string;
+  readonly priceId: string;
+  readonly interval: SubscriptionInterval;
+  readonly amount: number;
+  readonly features: readonly string[];
 }
 
-type SubscriptionPlans = {
-  readonly MONTHLY: SubscriptionPlan;
-  readonly YEARLY: SubscriptionPlan;
-};
+// Make the entire structure immutable
+type SubscriptionPlans = Readonly<{
+  MONTHLY: SubscriptionPlan;
+  YEARLY: SubscriptionPlan;
+}>;
 
 const isDev = process.env.NODE_ENV === 'development';
 
 /**
- * Subscription plan configuration
- * Uses environment variables in production, development values in dev mode
+ * Development price IDs - ensures type safety in dev mode
  */
+const DEV_PRICE_IDS = {
+  MONTHLY: 'dev_monthly',
+  YEARLY: 'dev_yearly'
+} as const;
+
+/**
+ * Helper to get appropriate price ID based on environment
+ */
+function getPriceId(type: 'MONTHLY' | 'YEARLY'): string {
+  if (isDev) {
+    return DEV_PRICE_IDS[type];
+  }
+  return getStripePrice(type === 'MONTHLY' ? 'premiumMonthly' : 'premiumYearly');
+}
+
 export const SUBSCRIPTION_PLANS: SubscriptionPlans = {
   MONTHLY: {
     name: 'Premium Monthly',
-    priceId: isDev ? 'dev_monthly' : getStripePrice('premiumMonthly'),
+    priceId: getPriceId('MONTHLY'),
     interval: 'month',
-    amount: 9,
+    amount: 399,
     features: [
       'Custom domain support',
       'Advanced analytics',
@@ -40,9 +53,9 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlans = {
   },
   YEARLY: {
     name: 'Premium Yearly',
-    priceId: isDev ? 'dev_yearly' : getStripePrice('premiumYearly'),
+    priceId: getPriceId('YEARLY'),
     interval: 'year',
-    amount: 90,
+    amount: 40,
     features: [
       'All Premium Monthly features',
       '2 months free',

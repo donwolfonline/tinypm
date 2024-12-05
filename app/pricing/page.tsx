@@ -42,7 +42,7 @@ export default function PricingPage() {
           isYearly ? 'transform-none opacity-100' : '-translate-y-2 opacity-0'
         }`}
       >
-        Save $4 yearly
+        Save $7.88 yearly
       </div>
     </div>
   );
@@ -140,7 +140,7 @@ export default function PricingPage() {
             </div>
             <div className="mb-6">
               <div className="mb-1 text-3xl font-bold transition-all duration-300">
-                {isYearly ? '$20' : '$1.99'}
+                {isYearly ? '$40' : '$3.99'}
               </div>
               <div className="text-sm text-[#FFCC00]/60">per {isYearly ? 'year' : 'month'}</div>
             </div>
