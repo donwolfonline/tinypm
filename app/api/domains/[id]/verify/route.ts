@@ -7,29 +7,36 @@ import dns from 'dns/promises';
 const VERIFICATION_COOLDOWN = 5 * 60 * 1000; // 5 minutes
 const MAX_VERIFICATION_ATTEMPTS = 5;
 
-export async function POST(
-  request: NextRequest,
-  context: { params: { id: string } }
-) {
+export async function POST(request: NextRequest) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Extract the dynamic route parameter from the request URL
+    const pathParts = request.nextUrl.pathname.split('/');
+    const idIndex = pathParts.length - 2;
+    const id = pathParts[idIndex];
+
+    // Ensure the extracted ID is not undefined
+    if (!id) {
+      return NextResponse.json({ error: 'Invalid domain ID' }, { status: 400 });
+    }
+
     // Fetch domain with user check for security
     const domain = await prisma.customDomain.findFirst({
       where: {
-        id: context.params.id,
+        id,
         userId: session.user.id,
       },
       include: {
         user: {
           include: {
-            subscription: true
-          }
-        }
-      }
+            subscription: true,
+          },
+        },
+      },
     });
 
     if (!domain) {
@@ -38,101 +45,122 @@ export async function POST(
 
     // Verify subscription status
     if (domain.user.subscription?.status !== 'ACTIVE') {
-      return NextResponse.json({ 
-        error: 'Active subscription required',
-        code: 'SUBSCRIPTION_REQUIRED'
-      }, { status: 402 });
+      return NextResponse.json(
+        {
+          error: 'Active subscription required',
+          code: 'SUBSCRIPTION_REQUIRED',
+        },
+        { status: 402 }
+      );
     }
 
     // Check verification attempt cooldown
     if (domain.lastAttemptAt) {
       const timeSinceLastAttempt = Date.now() - domain.lastAttemptAt.getTime();
       if (timeSinceLastAttempt < VERIFICATION_COOLDOWN) {
-        const remainingCooldown = Math.ceil((VERIFICATION_COOLDOWN - timeSinceLastAttempt) / 1000);
-        return NextResponse.json({
-          error: `Please wait ${remainingCooldown} seconds before retrying`,
-          code: 'RATE_LIMITED'
-        }, { 
-          status: 429,
-          headers: {
-            'Retry-After': remainingCooldown.toString()
+        const remainingCooldown = Math.ceil(
+          (VERIFICATION_COOLDOWN - timeSinceLastAttempt) / 1000
+        );
+        return NextResponse.json(
+          {
+            error: `Please wait ${remainingCooldown} seconds before retrying`,
+            code: 'RATE_LIMITED',
+          },
+          {
+            status: 429,
+            headers: {
+              'Retry-After': remainingCooldown.toString(),
+            },
           }
-        });
+        );
       }
     }
 
     // Check maximum attempts
     if (domain.verificationAttempts >= MAX_VERIFICATION_ATTEMPTS) {
-      return NextResponse.json({
-        error: 'Maximum verification attempts exceeded. Please contact support.',
-        code: 'MAX_ATTEMPTS_EXCEEDED'
-      }, { status: 429 });
+      return NextResponse.json(
+        {
+          error: 'Maximum verification attempts exceeded. Please contact support.',
+          code: 'MAX_ATTEMPTS_EXCEEDED',
+        },
+        { status: 429 }
+      );
     }
 
     // Update attempt counter and timestamp
     await prisma.customDomain.update({
-      where: { id: context.params.id },
+      where: { id },
       data: {
         verificationAttempts: { increment: 1 },
         lastAttemptAt: new Date(),
-        status: 'DNS_VERIFICATION'
-      }
+        status: 'DNS_VERIFICATION',
+      },
     });
 
     try {
       // Verify CNAME record
       const records = await dns.resolveCname(domain.domain);
-      
+
       if (!records.includes(domain.cnameTarget)) {
         await prisma.customDomain.update({
-          where: { id: context.params.id },
+          where: { id },
           data: {
             status: 'FAILED',
-            errorMessage: `CNAME record should point to ${domain.cnameTarget}`
-          }
+            errorMessage: `CNAME record should point to ${domain.cnameTarget}`,
+          },
         });
 
-        return NextResponse.json({
-          error: `CNAME record should point to ${domain.cnameTarget}`,
-          code: 'DNS_ERROR'
-        }, { status: 400 });
+        return NextResponse.json(
+          {
+            error: `CNAME record should point to ${domain.cnameTarget}`,
+            code: 'DNS_ERROR',
+          },
+          { status: 400 }
+        );
       }
 
       // DNS verification successful
       const verifiedDomain = await prisma.customDomain.update({
-        where: { id: context.params.id },
+        where: { id },
         data: {
           status: 'ACTIVE',
           verifiedAt: new Date(),
-          errorMessage: null
-        }
+          errorMessage: null,
+        },
       });
 
       return NextResponse.json(verifiedDomain);
     } catch (dnsError) {
       // Handle DNS resolution failures
-      const errorMessage = dnsError instanceof Error ? 
-        `DNS verification failed: ${dnsError.message}` : 
-        'DNS verification failed';
+      const errorMessage =
+        dnsError instanceof Error
+          ? `DNS verification failed: ${dnsError.message}`
+          : 'DNS verification failed';
 
       await prisma.customDomain.update({
-        where: { id: context.params.id },
+        where: { id },
         data: {
           status: 'FAILED',
-          errorMessage: errorMessage
-        }
+          errorMessage: errorMessage,
+        },
       });
 
-      return NextResponse.json({
-        error: errorMessage,
-        code: 'DNS_ERROR'
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: errorMessage,
+          code: 'DNS_ERROR',
+        },
+        { status: 400 }
+      );
     }
   } catch (error) {
     console.error('Domain verification error:', error);
-    return NextResponse.json({
-      error: 'An unexpected error occurred during domain verification',
-      requestId: crypto.randomUUID()
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: 'An unexpected error occurred during domain verification',
+        requestId: crypto.randomUUID(),
+      },
+      { status: 500 }
+    );
   }
 }
