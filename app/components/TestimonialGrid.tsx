@@ -11,10 +11,10 @@ type Testimonial = {
 
 const testimonials: Testimonial[] = [
   {
-    name: 'Tarik Celik',
-    role: 'Twitch Streamer',
-    quote: "Tarik doesn't use tinypm... yet!",
-    image: '/images/people/tarikcelik.jpeg',
+    name: 'Busheezy',
+    role: 'Gamer + Developer',
+    quote: "The developers went above and beyond to implement features tailored to my needs, making it the perfect platform for managing my links.",
+    image: '/images/people/busheezy.png',
   },
   {
     name: 'Zach Sims',
