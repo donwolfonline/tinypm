@@ -43,10 +43,9 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlans = {
     name: 'Premium Monthly',
     priceId: getPriceId('MONTHLY'),
     interval: 'month',
-    amount: 399,
+    amount: 3.99,
     features: [
       'Custom domain support',
-      'Advanced analytics',
       'Priority support',
       'Remove tiny.pm branding'
     ]
@@ -55,11 +54,10 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlans = {
     name: 'Premium Yearly',
     priceId: getPriceId('YEARLY'),
     interval: 'year',
-    amount: 40,
+    amount: 35,
     features: [
       'All Premium Monthly features',
       '2 months free',
-      'Early access to new features'
     ]
   }
 } as const;
