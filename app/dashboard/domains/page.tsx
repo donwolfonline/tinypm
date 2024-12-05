@@ -188,49 +188,57 @@ export default function DomainsPage() {
   }, [status, router]);
 
   useEffect(() => {
-    const VERIFICATION_POLL_INTERVAL = 10000;
-    
-    async function pollDomainStatus() {
-      const domain = domains.find(d => d.id === activeVerification);
-      if (!domain || domain.status !== 'DNS_VERIFICATION') {
-        return;
-      }
+    if (!activeVerification) return;
   
+    // Debug logging
+    console.log('[Verification Poll] Starting verification polling for:', {
+      activeVerification,
+      domain: domains.find(d => d.id === activeVerification)?.domain
+    });
+  
+    const pollDomainStatus = async () => {
       try {
-        console.log(`[Domain Poll] Attempting verification for domain: ${domain.domain}`);
-        const response = await fetch(`/api/domains/${domain.id}/verify`, {
+        // Explicitly log each verification attempt
+        console.log('[Verification Poll] Making verification request');
+        
+        const response = await fetch(`/api/domains/${activeVerification}/verify`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           }
         });
   
+        const data = await response.json();
+        console.log('[Verification Poll] Verification response:', data);
+  
         if (!response.ok) {
-          throw new Error(`Verification failed: ${response.statusText}`);
+          throw new Error(data.error || 'Verification failed');
         }
   
-        const updatedDomain = await response.json();
-        console.log('[Domain Poll] Verification response:', updatedDomain);
-  
+        // Update domains state with new status
         setDomains(prev => prev.map(d => 
-          d.id === domain.id ? updatedDomain : d
+          d.id === activeVerification ? data : d
         ));
   
-        if (updatedDomain.status === 'ACTIVE') {
+        // Clear verification if active or failed
+        if (data.status === 'ACTIVE' || data.status === 'FAILED') {
           setActiveVerification(null);
         }
       } catch (error) {
-        console.error('[Domain Poll] Verification error:', error);
+        console.error('[Verification Poll] Error:', error);
       }
-    }
+    };
   
-    if (activeVerification) {
-      const intervalId = setInterval(pollDomainStatus, VERIFICATION_POLL_INTERVAL);
-      // Initial check
-      pollDomainStatus();
+    // Initial immediate check
+    pollDomainStatus();
   
-      return () => clearInterval(intervalId);
-    }
+    // Set up polling interval
+    const intervalId = setInterval(pollDomainStatus, 10000);
+  
+    return () => {
+      console.log('[Verification Poll] Cleaning up polling interval');
+      clearInterval(intervalId);
+    };
   }, [activeVerification, domains]);
 
   // Show loading state while checking subscription

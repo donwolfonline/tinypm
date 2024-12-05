@@ -25,6 +25,8 @@ const domainConfig = {
   ])
 } as const;
 
+
+
 /**
  * Checks if a pathname should bypass domain verification
  * @param pathname The path to check
@@ -44,6 +46,16 @@ function cleanHostname(hostname: string): string {
 }
 
 export async function middleware(request: NextRequest) {
+
+  if (request.nextUrl.pathname.includes('/api/domains') && 
+    request.nextUrl.pathname.includes('/verify')) {
+  console.log('[Middleware] Verification request:', {
+    method: request.method,
+    url: request.nextUrl.pathname,
+    headers: Object.fromEntries(request.headers),
+    timestamp: new Date().toISOString()
+  });
+}
   // Add API request logging
   if (request.nextUrl.pathname.startsWith('/api/')) {
     console.log('[API Request]', {
