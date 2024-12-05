@@ -1,7 +1,7 @@
 // app/dashboard/domains/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, Globe, Plus, ExternalLink, Trash2, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -17,58 +17,8 @@ export default function DomainsPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeVerification, setActiveVerification] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
-
-  // Fetch existing domains and subscription
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch('/api/domains');
-        if (!response.ok) throw new Error('Failed to fetch domains');
-        const data = await response.json();
-        setDomains(data.domains);
-
-        const subscriptionResponse = await fetch('/api/subscription');
-        if (!subscriptionResponse.ok) throw new Error('Failed to fetch subscription');
-        const subscriptionData = await subscriptionResponse.json();
-        setSubscription(subscriptionData.subscription);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        setError('Failed to load data');
-      }
-    };
-    fetchData();
-  }, []);
-
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/login');
-    }
-  }, [status, router]);
-
-  // Check subscription status
-  useEffect(() => {
-    if (subscription?.status !== 'ACTIVE') {
-      router.push('/dashboard?upgrade=true');
-    }
-  }, [subscription, router]);
-
-  // Poll for domain verification status
-  useEffect(() => {
-    const VERIFICATION_POLL_INTERVAL = 10000; // 10 seconds
-
-    if (!activeVerification) return;
-
-    const interval = setInterval(async () => {
-      const domain = domains.find(d => d.id === activeVerification);
-      if (domain && domain.status === 'DNS_VERIFICATION') {
-        await verifyDomain(domain.id);
-      } else {
-        setActiveVerification(null);
-      }
-    }, VERIFICATION_POLL_INTERVAL);
-
-    return () => clearInterval(interval);
-  }, [activeVerification, domains]);
+  // Add loading state
+  const [isLoading, setIsLoading] = useState(true);
 
   const addDomain = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,7 +51,7 @@ export default function DomainsPage() {
     }
   };
 
-  const verifyDomain = async (id: string) => {
+  const verifyDomain = useCallback(async (id: string) => {
     try {
       const response = await fetch(`/api/domains/${id}/verify`, { method: 'POST' });
       if (!response.ok) throw new Error('Verification failed');
@@ -115,7 +65,7 @@ export default function DomainsPage() {
     } catch (error) {
       console.error('Error verifying domain:', error);
     }
-  };
+  }, []);
 
   const deleteDomain = async (id: string) => {
     if (!confirm('Are you sure you want to delete this domain?')) return;
@@ -165,6 +115,124 @@ export default function DomainsPage() {
     }
   };
 
+  // Fetch existing domains and subscription
+  useEffect(() => {
+    const fetchData = async () => {
+      if (status === 'loading') return;
+      
+      try {
+        setIsLoading(true);
+        const [domainsResponse, subscriptionResponse] = await Promise.all([
+          fetch('/api/domains'),
+          fetch('/api/subscription')
+        ]);
+
+        if (!domainsResponse.ok || !subscriptionResponse.ok) {
+          throw new Error('Failed to fetch required data');
+        }
+
+        const [domainsData, subscriptionData] = await Promise.all([
+          domainsResponse.json(),
+          subscriptionResponse.json()
+        ]);
+
+        setDomains(domainsData.domains);
+        setSubscription(subscriptionData.subscription);
+        
+        // Check subscription status only after we have the data
+        if (subscriptionData.subscription?.status !== 'ACTIVE') {
+          router.push('/dashboard?upgrade=true');
+          return;
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setError('Failed to load data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (status === 'authenticated') {
+      fetchData();
+    }
+  }, [status, router]);
+
+  // Handle authentication
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
+
+  useEffect(() => {
+    const VERIFICATION_POLL_INTERVAL = 10000; // 10 seconds
+    const MAX_ATTEMPTS = 30; // 5 minutes maximum polling time
+    let attempts = 0;
+    let intervalId: NodeJS.Timeout | null = null;
+    
+    async function pollDomainStatus() {
+      if (!activeVerification) {
+        return;
+      }
+  
+      try {
+        const domain = domains.find(d => d.id === activeVerification);
+        
+        // Check domain validity and verification status
+        if (!domain || domain.status !== 'DNS_VERIFICATION' || attempts >= MAX_ATTEMPTS) {
+          setActiveVerification(null);
+          // Clear interval if we hit max attempts or invalid state
+          if (intervalId) {
+            clearInterval(intervalId);
+          }
+          return;
+        }
+  
+        await verifyDomain(domain.id);
+        attempts++;
+  
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`Verification attempt ${attempts}/${MAX_ATTEMPTS}`);
+        }
+      } catch (error) {
+        console.error('Domain verification failed:', error);
+        attempts++;
+        
+        if (attempts >= MAX_ATTEMPTS) {
+          setActiveVerification(null);
+          // Clear interval on max attempts
+          if (intervalId) {
+            clearInterval(intervalId);
+          }
+        }
+      }
+    }
+  
+    // Always set up the polling mechanism, but only execute if activeVerification exists
+    pollDomainStatus(); // Initial check
+    intervalId = setInterval(pollDomainStatus, VERIFICATION_POLL_INTERVAL);
+  
+    // Cleanup function always returns
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [activeVerification, domains, verifyDomain]);
+
+  // Show loading state while checking subscription
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#FFCC00] flex items-center justify-center">
+        <div className="flex items-center gap-2 bg-white rounded-lg p-4 shadow-lg">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <span>Loading...</span>
+        </div>
+      </div>
+    );
+  }
+  
+  
   return (
     <div className="min-h-screen bg-[#FFCC00]">
       <div className="mx-auto max-w-4xl px-4 py-8">
