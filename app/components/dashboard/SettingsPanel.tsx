@@ -351,12 +351,6 @@ export function SettingsPanel({
                       <div className="text-sm text-gray-500">Available with Pro plan</div>
                     </div>
                   </div>
-                  <Link
-                    href="/dashboard?upgrade=true"
-                    className="mt-3 block w-full rounded-lg bg-black px-4 py-2 text-center text-sm font-medium text-[#FFCC00]"
-                  >
-                    Upgrade to Pro
-                  </Link>
                 </div>
               </div>
             )}
