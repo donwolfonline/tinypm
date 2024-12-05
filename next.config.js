@@ -33,13 +33,37 @@ const nextConfig = {
   async rewrites() {
     return {
       beforeFiles: [
-        // Rewrite API requests to the correct path
+        // Handle custom domain requests
         {
-          source: '/api/:path*',
-          destination: '/api/:path*',
+          source: '/:path*',
+          has: [
+            {
+              type: 'host',
+              value: '(?!tiny\\.pm|localhost).*',  // Match any non-primary domain
+            },
+          ],
+          destination: '/api/proxy/:path*',  // Route through our proxy handler
         },
       ],
     };
+  },
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains'
+          },
+          // Required for Cloudflare SSL/TLS
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*'
+          }
+        ],
+      },
+    ];
   },
 };
 
