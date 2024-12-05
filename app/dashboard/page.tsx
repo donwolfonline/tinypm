@@ -8,7 +8,7 @@ import Image from 'next/image';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Settings } from 'lucide-react';
 import debounce from 'lodash/debounce';
-import { Theme, Content } from '@/types';
+import { Theme, Content, Subscription } from '@/types';
 import { themes, getThemeStyles } from '@/lib/themes';
 
 
@@ -28,6 +28,7 @@ export default function DashboardPage() {
   const router = useRouter();
 
   // State management
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isTransitioning, setIsTransitioning] = useState(true);
   const [content, setContent] = useState<Content[]>([]);
@@ -241,6 +242,28 @@ export default function DashboardPage() {
     initializeUserData();
   }, [session?.user]);
 
+  useEffect(() => {
+    async function fetchSubscriptionData() {
+      if (!session?.user?.email) return;
+
+      try {
+        const response = await fetch('/api/subscription');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setSubscription(data.subscription);
+      } catch (error) {
+        console.error('Failed to fetch subscription:', error);
+        // Consider showing a user-friendly error message
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchSubscriptionData();
+  }, [session?.user?.email]); // Only re-run if user email changes
+
   // Cleanup
   useEffect(() => {
     const currentDebouncedSave = debouncedSaveRef.current;
@@ -348,6 +371,7 @@ export default function DashboardPage() {
           updateSession={handleSessionUpdate}
           setSaveStatus={setSaveStatus}
           setErrorMessage={setErrorMessage}
+          subscription={subscription}
         />
 
         {/* Save Status Indicator */}
