@@ -4,9 +4,7 @@ import prisma from '@/lib/prisma';
 
 // Next.js 15 expects a very specific type for route handlers with dynamic params
 export async function GET(
-  req: NextRequest,
-  // This is the exact type expected by Next.js 15 for dynamic route segments
-  { params }: { params: Record<string, string | string[]> }
+  req: NextRequest & { params: { path: string[] } }
 ) {
   try {
     const hostname = req.headers.get('host');
@@ -47,7 +45,7 @@ export async function GET(
 
     // Construct target URL
     const url = new URL(req.url);
-    const pathSegments = params.path as string[];
+    const pathSegments = req.params.path;
     url.pathname = `/${customDomain.user.username}/${pathSegments.join('/')}`;
 
     // Forward the request with custom headers
