@@ -8,14 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { CustomDomain, DomainStatus, Subscription } from '@prisma/client';
 
-// Type for the component's props
-interface DomainsPageProps {
-  subscription?: Subscription | null;
-}
-
-const VERIFICATION_POLL_INTERVAL = 10000; // 10 seconds
-
-export default function DomainsPage({ subscription }: DomainsPageProps) {
+export default function DomainsPage() {
   const { status } = useSession();
   const router = useRouter();
   const [domains, setDomains] = useState<CustomDomain[]>([]);
@@ -23,10 +16,27 @@ export default function DomainsPage({ subscription }: DomainsPageProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeVerification, setActiveVerification] = useState<string | null>(null);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
 
-  // Fetch existing domains
+  // Fetch existing domains and subscription
   useEffect(() => {
-    fetchDomains();
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/api/domains');
+        if (!response.ok) throw new Error('Failed to fetch domains');
+        const data = await response.json();
+        setDomains(data.domains);
+
+        const subscriptionResponse = await fetch('/api/subscription');
+        if (!subscriptionResponse.ok) throw new Error('Failed to fetch subscription');
+        const subscriptionData = await subscriptionResponse.json();
+        setSubscription(subscriptionData.subscription);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setError('Failed to load data');
+      }
+    };
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -44,6 +54,8 @@ export default function DomainsPage({ subscription }: DomainsPageProps) {
 
   // Poll for domain verification status
   useEffect(() => {
+    const VERIFICATION_POLL_INTERVAL = 10000; // 10 seconds
+
     if (!activeVerification) return;
 
     const interval = setInterval(async () => {
@@ -57,18 +69,6 @@ export default function DomainsPage({ subscription }: DomainsPageProps) {
 
     return () => clearInterval(interval);
   }, [activeVerification, domains]);
-
-  const fetchDomains = async () => {
-    try {
-      const response = await fetch('/api/domains');
-      if (!response.ok) throw new Error('Failed to fetch domains');
-      const data = await response.json();
-      setDomains(data.domains);
-    } catch (error) {
-      console.error('Error fetching domains:', error);
-      setError('Failed to load domains');
-    }
-  };
 
   const addDomain = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -180,18 +180,18 @@ export default function DomainsPage({ subscription }: DomainsPageProps) {
         </div>
 
         {subscription?.status !== 'ACTIVE' && (
-        <div className="mx-auto max-w-4xl px-4">
-          <div className="rounded-lg bg-yellow-100 p-4 text-yellow-800">
-            <p>Custom domains require an active subscription.</p>
-            <Link
-              href="/dashboard?upgrade=true"
-              className="mt-2 inline-block text-sm font-medium text-yellow-900 underline"
-            >
-              Upgrade your plan
-            </Link>
+          <div className="mx-auto max-w-4xl px-4">
+            <div className="rounded-lg bg-yellow-100 p-4 text-yellow-800">
+              <p>Custom domains require an active subscription.</p>
+              <Link
+                href="/dashboard?upgrade=true"
+                className="mt-2 inline-block text-sm font-medium text-yellow-900 underline"
+              >
+                Upgrade your plan
+              </Link>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
         <div className="rounded-xl border-2 border-black bg-white p-6 shadow-lg">
           {/* Add Domain Form */}
