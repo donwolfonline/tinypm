@@ -36,7 +36,7 @@ interface SettingsPanelProps {
   updateSession: () => Promise<Session | null>;
   setSaveStatus: (status: 'idle' | 'pending' | 'saving' | 'saved' | 'error') => void;
   setErrorMessage: (message: string) => void;
-  subscription?: Subscription | null;
+  subscription: Subscription | null;
 }
 
 export function SettingsPanel({
@@ -57,7 +57,7 @@ export function SettingsPanel({
   updateSession,
   setSaveStatus,
   setErrorMessage,
-  subscription = null,
+  subscription,
 }: SettingsPanelProps) {
   const themeConfig = themes[currentTheme];
   const [pendingChanges, setPendingChanges] = useState<PendingChanges>({});
@@ -67,6 +67,11 @@ export function SettingsPanel({
   const [localName, setLocalName] = useState(displayName);
   const [localImage, setLocalImage] = useState(displayPicture || '');
   const [imageError, setImageError] = useState(false);
+
+  const isActiveSubscription =
+    subscription &&
+    subscription.status === 'ACTIVE' &&
+    new Date(subscription.currentPeriodEnd) > new Date();
 
   // Update local stateother fields
   useEffect(() => {
@@ -315,9 +320,9 @@ export function SettingsPanel({
             {/* Theme Selector */}
             <ThemeSelector currentTheme={localTheme} onThemeChange={handleLocalThemeChange} />
 
-            <SubscriptionSection subscription={subscription ?? null} />
+            <SubscriptionSection subscription={subscription} />
 
-            {subscription?.status === 'ACTIVE' ? (
+            {isActiveSubscription ? (
               <div className="border-t border-gray-200 pt-6">
                 <h3 className="mb-4 font-medium">Custom Domain</h3>
                 <Link

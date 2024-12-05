@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { CreditCard, Loader2 } from 'lucide-react';
 import { SUBSCRIPTION_PLANS, DEV_HELPERS } from '@/lib/subscription';
-import type { Subscription } from '@prisma/client';
+import type { Subscription } from  '@/types';
 
 interface SubscriptionSectionProps {
  subscription: Subscription | null;
@@ -12,11 +12,14 @@ export function SubscriptionSection({ subscription }: SubscriptionSectionProps) 
  const [isLoading, setIsLoading] = useState(false);
 
  // In development, use mock subscription data
- const effectiveSubscription = DEV_HELPERS.isDevelopment 
-   ? DEV_HELPERS.mockSubscription 
-   : subscription;
+ if (process.env.NODE_ENV === 'development') {
+  console.log('SubscriptionSection received:', { subscription });
+}
+const isValidSubscription = subscription && 
+subscription.status === 'ACTIVE' && 
+new Date(subscription.currentPeriodEnd) > new Date();
 
- const handleCheckout = async (interval: 'month' | 'year') => {
+const handleCheckout = async (interval: 'month' | 'year') => {
    try {
      setIsLoading(true);
 
@@ -72,35 +75,38 @@ export function SubscriptionSection({ subscription }: SubscriptionSectionProps) 
  };
 
  // Active subscription UI remains the same for both dev and prod
- if (effectiveSubscription?.status === 'ACTIVE') {
-   return (
-     <div className="space-y-4">
-       <h3 className="font-medium">Subscription</h3>
-       <div className="rounded-lg bg-green-50 p-4">
-         <div className="flex items-center justify-between">
-           <div>
-             <p className="font-medium text-green-800">Premium Active</p>
-             <p className="text-sm text-green-700">
-               Renews {new Date(effectiveSubscription.currentPeriodEnd).toLocaleDateString()}
-             </p>
-           </div>
-           <button
-             onClick={handlePortal}
-             disabled={isLoading}
-             className="flex items-center gap-2 rounded-lg border border-green-300 bg-white px-4 py-2 text-sm text-green-700 hover:bg-green-50"
-           >
-             {isLoading ? (
-               <Loader2 className="h-4 w-4 animate-spin" />
-             ) : (
-               <CreditCard className="h-4 w-4" />
-             )}
-             Manage Billing
-           </button>
-         </div>
-       </div>
-     </div>
-   );
- }
+ if (isValidSubscription) {
+  return (
+    <div className="space-y-4">
+      <h3 className="font-medium">Subscription</h3>
+      <div className="rounded-lg bg-green-50 p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-medium text-green-800">Premium Active</p>
+            <p className="text-sm text-green-700">
+              {subscription.cancelAtPeriodEnd 
+                ? `Expires ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`
+                : `Renews ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`
+              }
+            </p>
+          </div>
+          <button
+            onClick={handlePortal}
+            disabled={isLoading}
+            className="flex items-center gap-2 rounded-lg border border-green-300 bg-white px-4 py-2 text-sm text-green-700 hover:bg-green-50"
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <CreditCard className="h-4 w-4" />
+            )}
+            Manage Billing
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
  // Upgrade UI remains the same for both dev and prod
  return (

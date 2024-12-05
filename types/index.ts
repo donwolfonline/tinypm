@@ -13,6 +13,20 @@ export interface Link {
   updatedAt: Date;
 }
 
+export type SubscriptionStatus = 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'EXPIRED';
+
+export interface Subscription {
+  id: string;
+  userId: string;
+  status: SubscriptionStatus;
+  stripeSubscriptionId: string;
+  currentPeriodStart: Date;
+  currentPeriodEnd: Date;
+  cancelAtPeriodEnd: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface CustomDomain {
   id: string;
   domain: string;
@@ -76,6 +90,7 @@ export interface User {
   createdAt: Date;
   updatedAt: Date;
   emailVerified: Date | null;
+  subscription?: Subscription | null;
 }
 
 export interface Session {
