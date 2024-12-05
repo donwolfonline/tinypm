@@ -2,22 +2,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-interface RouteParams {
+// Type for the Next.js route parameters structure
+type RouteContext = {
   params: {
     path: string[];
   };
-  searchParams: { [key: string]: string | string[] | undefined };
-}
+};
 
 /**
  * Custom domain proxy handler for Next.js App Router
- * Handles requests to custom domains by proxying them to the appropriate user profile
- * while preserving path segments and query parameters
+ * Routes requests from custom domains to the appropriate user profile
+ * while preserving path segments and query parameters.
+ * 
+ * @param request - Incoming request from the custom domain
+ * @param context - Route context containing path parameters
+ * @returns NextResponse with either a rewrite to the correct user profile or an error
  */
-export async function GET(
+async function handler(
   request: NextRequest,
-  context: RouteParams
-) {
+  context: RouteContext
+): Promise<NextResponse> {
   try {
     const hostname = request.headers.get('host');
     if (!hostname) {
@@ -25,15 +29,15 @@ export async function GET(
       return new NextResponse('Invalid request', { status: 400 });
     }
 
-    // Normalize hostname and handle port numbers
+    // Normalize hostname by removing port and converting to lowercase
     const cleanHostname = hostname.split(':')[0].toLowerCase();
     
-    // Early return for primary domain requests
+    // Skip proxying for main domain and subdomains
     if (cleanHostname === 'tiny.pm' || cleanHostname.endsWith('.tiny.pm')) {
       return NextResponse.next();
     }
 
-    // Fetch active domain configuration with associated user
+    // Query for active domain configuration
     const customDomain = await prisma.customDomain.findFirst({
       where: {
         domain: cleanHostname,
@@ -49,9 +53,8 @@ export async function GET(
       },
     });
 
-    // Validate domain configuration
     if (!customDomain?.user?.username) {
-      console.error('[Proxy] Invalid domain configuration:', {
+      console.error('[Proxy] Domain not configured:', {
         domain: cleanHostname,
         timestamp: new Date().toISOString(),
       });
@@ -63,12 +66,12 @@ export async function GET(
       });
     }
 
-    // Construct target URL preserving path segments and query parameters
+    // Construct the target URL with preserved query parameters
     const url = new URL(request.url);
     const pathSegments = context.params.path || [];
     url.pathname = `/${customDomain.user.username}/${pathSegments.join('/')}`;
 
-    // Log rewrite operation for monitoring
+    // Log the rewrite for monitoring
     console.info('[Proxy] Rewriting request:', {
       from: request.url,
       to: url.toString(),
@@ -77,7 +80,7 @@ export async function GET(
       timestamp: new Date().toISOString(),
     });
 
-    // Perform the rewrite while maintaining original request properties
+    // Rewrite the request with custom headers for tracking
     return NextResponse.rewrite(url, {
       headers: {
         'X-Proxied-For': cleanHostname,
@@ -86,7 +89,6 @@ export async function GET(
     });
 
   } catch (error) {
-    // Log error with context for debugging
     console.error('[Proxy] Error handling request:', {
       error,
       url: request.url,
@@ -103,10 +105,11 @@ export async function GET(
   }
 }
 
-// Handler mapping for other HTTP methods
-export const POST = GET;
-export const PUT = GET;
-export const DELETE = GET;
-export const PATCH = GET;
-export const HEAD = GET;
-export const OPTIONS = GET;
+// Export the handler for all HTTP methods
+export const GET = handler;
+export const POST = handler;
+export const PUT = handler;
+export const DELETE = handler;
+export const PATCH = handler;
+export const HEAD = handler;
+export const OPTIONS = handler;
