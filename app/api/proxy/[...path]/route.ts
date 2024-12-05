@@ -1,43 +1,37 @@
-// app/api/proxy/[...path]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-// Type for the Next.js route parameters structure
-type RouteContext = {
-  params: {
-    path: string[];
-  };
-};
-
 /**
  * Custom domain proxy handler for Next.js App Router
- * Routes requests from custom domains to the appropriate user profile
- * while preserving path segments and query parameters.
+ * Handles requests to custom domains by proxying them to the appropriate user profile
  * 
- * @param request - Incoming request from the custom domain
- * @param context - Route context containing path parameters
- * @returns NextResponse with either a rewrite to the correct user profile or an error
+ * @param request - The incoming request object
+ * @param context - Contains route params with dynamic path segments
  */
-async function handler(
+export async function GET(
   request: NextRequest,
-  context: RouteContext
-): Promise<NextResponse> {
+  { params }: { params: { path: string[] } }
+) {
   try {
+    // Extract and validate host header
     const hostname = request.headers.get('host');
     if (!hostname) {
-      console.warn('[Proxy] Missing host header');
+      console.warn('[Proxy] Missing host header', {
+        url: request.url,
+        timestamp: new Date().toISOString()
+      });
       return new NextResponse('Invalid request', { status: 400 });
     }
 
-    // Normalize hostname by removing port and converting to lowercase
+    // Normalize hostname to handle ports and casing
     const cleanHostname = hostname.split(':')[0].toLowerCase();
     
-    // Skip proxying for main domain and subdomains
+    // Pass through requests to main domain
     if (cleanHostname === 'tiny.pm' || cleanHostname.endsWith('.tiny.pm')) {
       return NextResponse.next();
     }
 
-    // Query for active domain configuration
+    // Look up domain configuration
     const customDomain = await prisma.customDomain.findFirst({
       where: {
         domain: cleanHostname,
@@ -56,7 +50,7 @@ async function handler(
     if (!customDomain?.user?.username) {
       console.error('[Proxy] Domain not configured:', {
         domain: cleanHostname,
-        timestamp: new Date().toISOString(),
+        timestamp: new Date().toISOString()
       });
       return new NextResponse('Domain not configured', { 
         status: 404,
@@ -66,21 +60,21 @@ async function handler(
       });
     }
 
-    // Construct the target URL with preserved query parameters
+    // Construct target URL preserving path and query parameters
     const url = new URL(request.url);
-    const pathSegments = context.params.path || [];
+    const pathSegments = params.path || [];
     url.pathname = `/${customDomain.user.username}/${pathSegments.join('/')}`;
 
-    // Log the rewrite for monitoring
+    // Log rewrite operation
     console.info('[Proxy] Rewriting request:', {
       from: request.url,
       to: url.toString(),
       domain: cleanHostname,
       username: customDomain.user.username,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date().toISOString()
     });
 
-    // Rewrite the request with custom headers for tracking
+    // Perform rewrite with tracking headers
     return NextResponse.rewrite(url, {
       headers: {
         'X-Proxied-For': cleanHostname,
@@ -89,6 +83,7 @@ async function handler(
     });
 
   } catch (error) {
+    // Comprehensive error logging
     console.error('[Proxy] Error handling request:', {
       error,
       url: request.url,
@@ -105,11 +100,10 @@ async function handler(
   }
 }
 
-// Export the handler for all HTTP methods
-export const GET = handler;
-export const POST = handler;
-export const PUT = handler;
-export const DELETE = handler;
-export const PATCH = handler;
-export const HEAD = handler;
-export const OPTIONS = handler;
+// Apply the same handler to all HTTP methods
+export const POST = GET;
+export const PUT = GET;
+export const DELETE = GET;
+export const PATCH = GET;
+export const HEAD = GET;
+export const OPTIONS = GET;
