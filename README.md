@@ -28,166 +28,53 @@ A beautiful, minimal link-in-bio tool built with Next.js 14, TypeScript, and Tai
 
 ### Prerequisites
 
-- Node.js 18.17 or later
+- Node.js 20.0.0 or later
 - PostgreSQL
 - A Google OAuth application for authentication
 
-### Local Development
+### Installation
 
 1. Clone the repository:
-
 ```bash
-git clone git@github.com:Simsz/metinypm.git
-cd metinypm
+git clone https://github.com/donwolfonline/tinypm.git
+cd tinypm
 ```
 
 2. Install dependencies:
-
 ```bash
 npm install
 ```
 
-3. Create a `.env.local` file:
-
+3. Create a `.env.local` file with the following variables:
 ```env
-# Database
 DATABASE_URL="postgresql://user:password@localhost:5432/tinypm"
-
-# NextAuth
-NEXTAUTH_URL="http://localhost:3131"
-NEXTAUTH_SECRET="your-secret-here"
-
-# Google OAuth
-GOOGLE_CLIENT_ID="your-client-id"
-GOOGLE_CLIENT_SECRET="your-client-secret"
+GOOGLE_CLIENT_ID="your-google-client-id"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="your-nextauth-secret"
 ```
 
 4. Set up the database:
-
 ```bash
 npx prisma generate
 npx prisma db push
 ```
 
-5. Run the development server:
-
+5. Start the development server:
 ```bash
 npm run dev
 ```
 
-Visit `http://localhost:3131` to see your application.
-
-## Production Deployment
-
-### Server Prerequisites
-
-- Node.js 18.17 or later
-- PM2 for process management
-- Caddy web server
-- PostgreSQL
-- Git
-
-### Deployment Steps
-
-1. Set up your server and clone the repository:
-
-```bash
-mkdir -p /var/www
-cd /var/www
-git clone git@github.com:Simsz/metinypm.git
-cd metinypm
-```
-
-2. Install global dependencies:
-
-```bash
-npm install -g pm2
-```
-
-3. Create `.env.production`:
-
-```env
-# Database
-DATABASE_URL="postgresql://user:password@localhost:5432/tinypm"
-
-# NextAuth
-NEXTAUTH_URL="https://your-domain.com"
-NEXTAUTH_SECRET="your-production-secret"
-
-# Google OAuth
-GOOGLE_CLIENT_ID="your-production-client-id"
-GOOGLE_CLIENT_SECRET="your-production-client-secret"
-```
-
-4. Configure Caddy (example configuration):
-
-```caddyfile
-your-domain.com {
-    reverse_proxy localhost:3000
-    encode gzip
-}
-```
-
-5. Set up deployment script:
-
-```bash
-chmod +x deploy.sh
-./deploy.sh
-```
-
-6. Set up PM2 to run on startup:
-
-```bash
-pm2 startup
-pm2 save
-```
-
-### Updating Production
-
-To update your production deployment:
-
-```bash
-cd /var/www/metinypm
-./deploy.sh
-```
-
-## Project Structure
-
-```
-metinypm/
-├── app/
-│   ├── api/            # API routes
-│   ├── components/     # React components
-│   ├── types/          # TypeScript types
-│   └── [...]/          # Page routes
-├── prisma/
-│   └── schema.prisma   # Database schema
-├── public/             # Static files
-└── lib/                # Utility functions
-```
-
-## Environment Variables
-
-| Variable               | Description                          |
-| ---------------------- | ------------------------------------ |
-| `DATABASE_URL`         | PostgreSQL connection URL            |
-| `NEXTAUTH_URL`         | Full URL of your site                |
-| `NEXTAUTH_SECRET`      | Random string for session encryption |
-| `GOOGLE_CLIENT_ID`     | Google OAuth client ID               |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret           |
+The application will be available at `http://localhost:3000`.
 
 ## Contributing
 
-While this is a personal project, issues and pull requests are welcome. Please follow the existing code style and add unit tests for any new or changed functionality.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-None, all rights reserved.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## Acknowledgments
+## Author
 
-Created by [Zach Sims](https://zachsi.ms/). Built with Next.js, Tailwind CSS, and other amazing open-source projects.
-
----
-
-© TinyPM
+[Don Wolf](https://github.com/donwolfonline)
