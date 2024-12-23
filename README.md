@@ -77,4 +77,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Author
 
-[Don Wolf](https://github.com/donwolfonline)
+[Frederick Dineen](https://github.com/donwolfonline)
