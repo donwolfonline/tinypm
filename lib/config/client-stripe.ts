@@ -1,4 +1,6 @@
 // lib/config/client-stripe.ts
+import { env } from './env';
+
 /**
  * Client-safe configuration
  * Only includes public values that are safe to expose in the browser
@@ -14,19 +16,22 @@ export interface StripePublicConfig {
 
 class ClientStripeConfig {
   private static validateConfig(): StripePublicConfig {
-    const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-    const premiumMonthly = process.env.NEXT_PUBLIC_STRIPE_PREMIUM_MONTHLY_PRICE_ID;
-    const premiumYearly = process.env.NEXT_PUBLIC_STRIPE_PREMIUM_YEARLY_PRICE_ID;
+    const { publishableKey, premiumMonthlyPriceId, premiumYearlyPriceId } = env.stripe;
 
-    if (!publishableKey || !premiumMonthly || !premiumYearly) {
+    if (!publishableKey || !premiumMonthlyPriceId || !premiumYearlyPriceId) {
+      console.error('Stripe configuration:', {
+        publishableKey: !!publishableKey,
+        premiumMonthlyPriceId: !!premiumMonthlyPriceId,
+        premiumYearlyPriceId: !!premiumYearlyPriceId
+      });
       throw new Error('Missing required Stripe public configuration');
     }
 
     return {
       publishableKey,
       prices: {
-        premiumMonthly,
-        premiumYearly
+        premiumMonthly: premiumMonthlyPriceId,
+        premiumYearly: premiumYearlyPriceId
       }
     };
   }

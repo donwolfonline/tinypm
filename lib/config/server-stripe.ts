@@ -1,5 +1,6 @@
 // lib/config/server-stripe.ts
 import Stripe from 'stripe';
+import { env } from './env';
 
 /**
  * Server-side only Stripe configuration and initialization
@@ -14,15 +15,18 @@ class ServerStripeConfig {
     }
 
     if (!this.instance) {
-      const secretKey = process.env.STRIPE_SECRET_KEY;
-      const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      const { secretKey, webhookSecret } = env.stripe;
 
       if (!secretKey || !webhookSecret) {
+        console.error('Stripe server configuration:', {
+          secretKey: !!secretKey,
+          webhookSecret: !!webhookSecret
+        });
         throw new Error('Missing required Stripe server configuration');
       }
 
       this.instance = new Stripe(secretKey, {
-        apiVersion: '2024-11-20.acacia' as const,
+        apiVersion: '2023-10-16',
         typescript: true,
       });
     }
@@ -33,4 +37,4 @@ class ServerStripeConfig {
 
 // Export the server-side Stripe instance
 export const stripe = ServerStripeConfig.getInstance();
-export const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET!;
+export const WEBHOOK_SECRET = env.stripe.webhookSecret;
