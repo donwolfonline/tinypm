@@ -49,50 +49,40 @@ const reservedUsernames = new Set([
 
   // Common impersonation attempts
   'admin-team',
-  'mod-team',
   'support-team',
-  'help-desk',
-  'official-support',
-  'verification',
-  'verify',
-  'authenticated',
-
-  'tinypm',
-  'tiny_pm',
-  'tiny-pm',
-  'tiny',
-  'tiny_',
-  'pm_',
-  '_pm',
-  '_tiny',
+  'mod-team',
+  'staff-team',
+  'system-bot',
+  'service-bot',
+  'help-bot',
+  'info-bot',
+  'news-bot',
 ]);
 
 function validateUsername(username: string): { isValid: boolean; error?: string } {
-  // Basic validation
-  if (!username || typeof username !== 'string') {
-    return { isValid: false, error: 'Username is required' };
+  // Length check
+  if (!username || username.length < 3 || username.length > 20) {
+    return { 
+      isValid: false, 
+      error: 'Username must be between 3 and 20 characters' 
+    };
   }
 
-  // Format validation
-  const usernameRegex = /^[a-zA-Z0-9][a-zA-Z0-9_-]{1,18}[a-zA-Z0-9]$/;
+  // Character check
+  const usernameRegex = /^[a-zA-Z0-9_-]+$/;
   if (!usernameRegex.test(username)) {
     return { 
       isValid: false, 
-      error: 'Username must be 3-20 characters long, start and end with a letter or number, and can only contain letters, numbers, underscores, and hyphens'
+      error: 'Username can only contain letters, numbers, underscores, and hyphens' 
     };
   }
 
-  // Consecutive special characters
-  if (username.match(/[_-]{2,}/)) {
+  // Reserved username check
+  if (reservedUsernames.has(username.toLowerCase())) {
     return { 
       isValid: false, 
-      error: 'Username cannot contain consecutive special characters' 
+      error: 'This username is reserved' 
     };
-  }
-
-  // Reserved usernames
-  if (reservedUsernames.has(username.toLowerCase())) {
-    return { isValid: false, error: 'This username is reserved' };
   }
 
   // Offensive content check
@@ -178,14 +168,20 @@ export async function POST(req: Request) {
       );
     }
 
-    // Update user
-    const updatedUser = await prisma.user.update({
+    // Find or create user
+    const user = await prisma.user.upsert({
       where: { email: session.user.email },
-      data: { username },
+      update: { username },
+      create: {
+        email: session.user.email,
+        name: session.user.name,
+        image: session.user.image,
+        username,
+      },
     });
 
     return NextResponse.json(
-      updatedUser,
+      user,
       { 
         status: 200,
         headers: { 'Content-Type': 'application/json' }
