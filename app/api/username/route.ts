@@ -1,13 +1,48 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
+
+// Helper function to check database connection
+async function checkDatabaseConnection() {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return true;
+  } catch (error) {
+    console.error('Database connection check failed:', error);
+    return false;
+  }
+}
 
 export async function POST(req: Request) {
   try {
-    const { username } = await req.json();
+    // Check database connection first
+    const isConnected = await checkDatabaseConnection();
+    if (!isConnected) {
+      return NextResponse.json(
+        { error: 'Database connection error', details: 'Could not connect to the database' },
+        { status: 503 }
+      );
+    }
+
+    // Parse request body
+    let username: string;
+    try {
+      const body = await req.json();
+      username = body.username;
+    } catch (error) {
+      console.error('Error parsing request body:', error);
+      return NextResponse.json(
+        { error: 'Invalid request body', details: 'Could not parse JSON body' },
+        { status: 400 }
+      );
+    }
 
     // Basic validation
     if (!username) {
-      return NextResponse.json({ error: 'Username is required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Username is required', details: 'Username field must not be empty' },
+        { status: 400 }
+      );
     }
 
     // Username format validation
@@ -15,31 +50,108 @@ export async function POST(req: Request) {
     if (!usernameRegex.test(username)) {
       return NextResponse.json(
         {
-          error:
-            'Username must be 3-20 characters long and can only contain letters, numbers, underscores, and hyphens',
+          error: 'Invalid username format',
+          details: 'Username must be 3-20 characters long and can only contain letters, numbers, underscores, and hyphens',
         },
         { status: 400 }
       );
     }
 
     // Check reserved usernames
-    const reservedUsernames = ['admin', 'settings', 'login', 'signup', 'api', 'dashboard'];
+    const reservedUsernames = [
+      'admin',
+      'settings',
+      'login',
+      'signup',
+      'api',
+      'dashboard',
+      'register',
+      'auth',
+      'user',
+      'users',
+      'profile',
+      'subscription',
+      'billing',
+      'support',
+      'help',
+      'docs',
+      'documentation',
+      'terms',
+      'privacy',
+      'about',
+      'contact',
+    ];
+
     if (reservedUsernames.includes(username.toLowerCase())) {
-      return NextResponse.json({ error: 'This username is reserved' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Reserved username', details: 'This username is reserved and cannot be used' },
+        { status: 400 }
+      );
     }
 
     // Check if username exists
-    const existingUser = await prisma.user.findUnique({
-      where: { username },
-    });
+    try {
+      const existingUser = await prisma.user.findUnique({
+        where: { username },
+        select: { id: true }, // Only select id for performance
+      });
 
-    if (existingUser) {
-      return NextResponse.json({ error: 'Username is already taken' }, { status: 400 });
+      if (existingUser) {
+        return NextResponse.json(
+          { error: 'Username taken', details: 'This username is already in use' },
+          { status: 400 }
+        );
+      }
+
+      return NextResponse.json({ available: true, username });
+    } catch (error) {
+      console.error('Database error checking username:', error);
+
+      // Handle Prisma-specific errors
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        console.error('Prisma known error:', {
+          code: error.code,
+          message: error.message,
+          meta: error.meta,
+        });
+        return NextResponse.json(
+          { error: 'Database error', code: error.code, details: error.message },
+          { status: 500 }
+        );
+      }
+
+      if (error instanceof Prisma.PrismaClientInitializationError) {
+        console.error('Prisma initialization error:', error.message);
+        return NextResponse.json(
+          { error: 'Database initialization error', details: error.message },
+          { status: 503 }
+        );
+      }
+
+      if (error instanceof Prisma.PrismaClientRustPanicError) {
+        console.error('Prisma client panic error:', error.message);
+        return NextResponse.json(
+          { error: 'Critical database error', details: error.message },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json(
+        {
+          error: 'Internal server error',
+          details: error instanceof Error ? error.message : 'Unknown error checking username',
+        },
+        { status: 500 }
+      );
     }
-
-    return NextResponse.json({ available: true });
   } catch (error) {
-    console.error('Username check error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('Unhandled error in username API:', error);
+    return NextResponse.json(
+      {
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error in username API',
+      },
+      { status: 500 }
+    );
   }
 }
