@@ -21,12 +21,15 @@ const appConfig = {
         '/fonts',
         '/favicon.ico',
         '/dashboard',
+        '/404',
+        '/not-found'
       ],
       // Development domains with exact matching for performance
       allowed: new Set([
         'localhost:3131',
         '127.0.0.1:3131',
-        'dev.tiny.pm:3131'
+        'dev.tiny.pm:3131',
+        'tinypm.vercel.app'
       ])
     }
   },
@@ -51,7 +54,7 @@ const utils = {
    * Ensures consistent hostname comparison across the application
    */
   normalizeHostname(hostname: string): string {
-    return hostname.split(':')[0].toLowerCase();
+    return hostname.toLowerCase().split(':')[0];
   },
 
   /**
@@ -59,7 +62,9 @@ const utils = {
    * Used for static assets and API routes that don't require domain checks
    */
   isPublicPath(pathname: string): boolean {
-    return appConfig.domains.public.paths.some(path => pathname.startsWith(path));
+    return appConfig.domains.public.paths.some(
+      publicPath => pathname.startsWith(publicPath)
+    );
   },
 
   /**
@@ -68,14 +73,14 @@ const utils = {
    */
   handleCloudflareSSL(request: NextRequest): NextResponse | null {
     try {
-      const cfVisitor = JSON.parse(request.headers.get('cf-visitor') || '{}');
-      
-      if (process.env.NODE_ENV === 'production' && 
-          cfVisitor.scheme === 'http' && 
-          appConfig.security.ssl.enforceHttps) {
-        const secureUrl = new URL(request.url);
-        secureUrl.protocol = 'https:';
-        return NextResponse.redirect(secureUrl);
+      const cfVisitor = request.headers.get('cf-visitor');
+      if (!cfVisitor) return null;
+
+      const { scheme } = JSON.parse(cfVisitor);
+      if (scheme === 'http') {
+        const httpsUrl = request.nextUrl.clone();
+        httpsUrl.protocol = 'https:';
+        return NextResponse.redirect(httpsUrl);
       }
     } catch (error) {
       console.error('[SSL] Error parsing cf-visitor:', error);
@@ -85,6 +90,11 @@ const utils = {
 };
 
 export async function middleware(request: NextRequest) {
+  // Skip middleware for not-found and 404 pages
+  if (request.nextUrl.pathname === '/404' || request.nextUrl.pathname === '/not-found') {
+    return NextResponse.next();
+  }
+
   // Enhanced request logging
   if (request.nextUrl.pathname.includes('/api/domains/verify')) {
     console.log('[Middleware] Verification request:', {
