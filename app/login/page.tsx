@@ -1,37 +1,40 @@
 'use client';
 
 import { signIn, signOut, useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 
 export default function LoginPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Get error from URL if present
-    const urlParams = new URLSearchParams(window.location.search);
-    const errorMessage = urlParams.get('error');
+    const errorMessage = searchParams.get('error');
     if (errorMessage) {
       setError(errorMessage);
     }
 
-    if (session) {
-      if (session.user?.username) {
+    if (session?.user) {
+      if (session.user.username) {
         router.push('/dashboard');
       } else {
         router.push('/register');
       }
     }
-  }, [session, router]);
+  }, [session, router, searchParams]);
 
   const handleSignIn = async () => {
     try {
+      setError(null);
       const result = await signIn('google', {
         callbackUrl: '/dashboard',
+        redirect: false,
       });
+      
       if (result?.error) {
         setError(result.error);
       }

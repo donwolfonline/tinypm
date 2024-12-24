@@ -1,13 +1,22 @@
 // lib/auth.ts
 import { AuthOptions } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import Google from 'next-auth/providers/google';
 import prisma from '@/lib/prisma';
+
+if (!process.env.GOOGLE_CLIENT_ID) {
+  throw new Error('Missing GOOGLE_CLIENT_ID');
+}
+
+if (!process.env.GOOGLE_CLIENT_SECRET) {
+  throw new Error('Missing GOOGLE_CLIENT_SECRET');
+}
 
 export const authOptions: AuthOptions = {
   providers: [
     Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       authorization: {
         params: {
           prompt: "select_account"
@@ -98,9 +107,6 @@ export const authOptions: AuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
 };
-
-// Helper function to get server session
-import { getServerSession } from 'next-auth/next';
 
 export async function getAuthSession() {
   return await getServerSession(authOptions);
