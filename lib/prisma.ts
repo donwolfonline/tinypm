@@ -2,42 +2,150 @@ import { PrismaClient } from '@prisma/client';
 
 const globalForPrisma = global as { prisma?: PrismaClient };
 
-function createPrismaClient() {
-  const client = new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  });
+// Configuration
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 1 second
+const SLOW_QUERY_THRESHOLD = 1000; // 1 second
 
-  // Add middleware for error handling and logging
-  client.$use(async (params, next) => {
-    try {
-      const result = await next(params);
-      return result;
-    } catch (error) {
-      console.error('Prisma Client Error:', {
-        model: params.model,
-        action: params.action,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-      throw error;
-    }
-  });
+// Helper functions
+async function waitFor(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-  // Test database connection
-  client.$connect()
-    .then(() => {
-      console.log('Successfully connected to the database');
-    })
-    .catch((error) => {
-      console.error('Failed to connect to the database:', error);
+async function testConnection(client: PrismaClient): Promise<boolean> {
+  try {
+    // Log database URL pattern (without credentials)
+    const dbUrl = process.env.DATABASE_URL || '';
+    console.log('Database URL pattern:', dbUrl.replace(/\/\/[^@]*@/, '//<credentials>@'));
+    
+    // Test connection
+    await client.$queryRaw`SELECT 1`;
+    return true;
+  } catch (error) {
+    console.error('Database connection test failed:', {
+      error: error instanceof Error ? {
+        name: error.name,
+        message: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      } : 'Unknown error',
     });
-
-  return client;
+    return false;
+  }
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+async function createPrismaClient(): Promise<PrismaClient> {
+  let retries = 0;
+  let lastError: Error | null = null;
+  
+  while (retries < MAX_RETRIES) {
+    try {
+      console.log(`Initializing Prisma client (attempt ${retries + 1}/${MAX_RETRIES})...`);
+      
+      // Create client with logging
+      const client = new PrismaClient({
+        log: process.env.NODE_ENV === 'development' 
+          ? ['query', 'error', 'warn'] 
+          : ['error'],
+        errorFormat: 'pretty',
+      });
 
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma;
+      // Add middleware for error handling and logging
+      client.$use(async (params, next) => {
+        const startTime = Date.now();
+        try {
+          const result = await next(params);
+          const duration = Date.now() - startTime;
+          
+          // Log slow queries
+          if (duration > SLOW_QUERY_THRESHOLD) {
+            console.warn('Slow query detected:', {
+              model: params.model,
+              action: params.action,
+              duration: `${duration}ms`,
+            });
+          }
+          
+          return result;
+        } catch (error) {
+          // Log query errors
+          console.error('Prisma query error:', {
+            model: params.model,
+            action: params.action,
+            args: params.args,
+            duration: `${Date.now() - startTime}ms`,
+            error: error instanceof Error ? {
+              name: error.name,
+              message: error.message,
+              stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+            } : 'Unknown error',
+          });
+          throw error;
+        }
+      });
+
+      // Test database connection
+      console.log('Testing database connection...');
+      const isConnected = await testConnection(client);
+      if (!isConnected) {
+        throw new Error('Database connection test failed');
+      }
+
+      console.log('Successfully connected to the database');
+      return client;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error('Unknown error during Prisma initialization');
+      retries++;
+      
+      console.error(`Failed to initialize Prisma client (attempt ${retries}/${MAX_RETRIES}):`, {
+        error: error instanceof Error ? {
+          name: error.name,
+          message: error.message,
+          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+        } : 'Unknown error',
+      });
+      
+      if (retries === MAX_RETRIES) {
+        console.error('Maximum retries reached. Could not establish database connection.');
+        throw lastError;
+      }
+      
+      // Wait before retrying with exponential backoff
+      const delay = RETRY_DELAY * Math.pow(2, retries - 1);
+      console.log(`Waiting ${delay}ms before retry...`);
+      await waitFor(delay);
+    }
+  }
+  
+  throw lastError || new Error('Could not establish database connection');
 }
 
+// Initialize Prisma client
+let prisma: PrismaClient;
+
+if (!globalForPrisma.prisma) {
+  console.log('Creating new Prisma client instance...');
+  createPrismaClient()
+    .then(client => {
+      console.log('Prisma client initialized successfully');
+      prisma = client;
+      if (process.env.NODE_ENV !== 'production') {
+        globalForPrisma.prisma = client;
+      }
+    })
+    .catch(error => {
+      console.error('Fatal: Failed to initialize Prisma client:', {
+        error: error instanceof Error ? {
+          name: error.name,
+          message: error.message,
+          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+        } : 'Unknown error',
+      });
+      process.exit(1);
+    });
+} else {
+  console.log('Using existing Prisma client instance');
+  prisma = globalForPrisma.prisma;
+}
+
+export { prisma };
 export default prisma;
