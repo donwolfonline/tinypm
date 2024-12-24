@@ -2,10 +2,10 @@
 
 import { signIn, signOut, useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import Image from 'next/image';
 
-export default function LoginPage() {
+function LoginContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -113,5 +113,34 @@ export default function LoginPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-[#FFCC00]">
+        <div className="w-full max-w-md rounded-lg border-2 border-black bg-white p-8 shadow-lg">
+          <div className="mx-auto mb-6 h-16 w-16">
+            <Image
+              src="/images/goose.svg"
+              alt="TinyPM Logo"
+              width={64}
+              height={64}
+              priority
+            />
+          </div>
+          <h2 className="mb-6 text-center text-2xl font-bold">Welcome to tiny.pm</h2>
+          <div className="text-center">
+            <div className="mb-4">
+              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-[#FFCC00] border-t-transparent"></div>
+            </div>
+            <p>Loading...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }
