@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { getPrismaClient } from '@/lib/prisma';
 import { getAuthSession } from '@/lib/auth';
-import { Prisma } from '@prisma/client';
+import { Prisma, SubscriptionStatus } from '@prisma/client';
 import Stripe from 'stripe';
 
 export const runtime = 'nodejs'; // Force Node.js runtime
@@ -24,15 +24,10 @@ async function checkDatabaseConnection() {
 }
 
 // Helper function to get Stripe subscription data
-async function getStripeSubscription(customerId: string) {
+async function getStripeSubscription(subscriptionId: string) {
   try {
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      status: 'active',
-      limit: 1,
-    });
-
-    return subscriptions.data[0] || null;
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    return subscription;
   } catch (error) {
     console.error('Error fetching Stripe subscription:', error);
     return null;
@@ -66,10 +61,8 @@ export async function GET() {
       const prisma = await getPrismaClient();
       const user = await prisma.user.findUnique({
         where: { email: session.user.email },
-        select: {
-          id: true,
-          email: true,
-          stripeCustomerId: true,
+        include: {
+          subscription: true,
         },
       });
 
@@ -81,33 +74,36 @@ export async function GET() {
         );
       }
 
-      // If user has no Stripe customer ID, they're on the free plan
-      if (!user.stripeCustomerId) {
-        console.log('User has no Stripe customer ID, returning free plan');
+      // If user has no subscription, they're on the free plan
+      if (!user.subscription) {
+        console.log('User has no subscription, returning free plan');
         return NextResponse.json({
           subscription: {
             plan: 'free',
-            active: true,
+            status: SubscriptionStatus.EXPIRED,
+            active: false,
             cancelAtPeriodEnd: false,
             currentPeriodEnd: null,
             stripeSubscriptionId: null,
-            stripeCustomerId: null,
+            stripeCustomerId: user.stripeCustomerId || null,
           },
         });
       }
 
-      // Get Stripe subscription
-      const stripeSubscription = await getStripeSubscription(user.stripeCustomerId);
+      // Get latest Stripe data if available
+      let stripeData = null;
+      if (user.subscription.stripeSubscriptionId) {
+        stripeData = await getStripeSubscription(user.subscription.stripeSubscriptionId);
+      }
 
       // Format subscription data
       const subscription = {
-        plan: stripeSubscription?.items?.data[0]?.price?.lookup_key || 'free',
-        active: !!stripeSubscription,
-        cancelAtPeriodEnd: stripeSubscription?.cancel_at_period_end || false,
-        currentPeriodEnd: stripeSubscription?.current_period_end
-          ? new Date(stripeSubscription.current_period_end * 1000)
-          : null,
-        stripeSubscriptionId: stripeSubscription?.id || null,
+        plan: stripeData?.items?.data[0]?.price?.lookup_key || 'free',
+        status: user.subscription.status,
+        active: user.subscription.status === SubscriptionStatus.ACTIVE,
+        cancelAtPeriodEnd: user.subscription.cancelAtPeriodEnd,
+        currentPeriodEnd: user.subscription.currentPeriodEnd,
+        stripeSubscriptionId: user.subscription.stripeSubscriptionId,
         stripeCustomerId: user.stripeCustomerId,
       };
 

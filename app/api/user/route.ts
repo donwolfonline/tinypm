@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { getPrismaClient } from '@/lib/prisma';
 import { getAuthSession } from '@/lib/auth';
-import { Prisma } from '@prisma/client';
+import { Prisma, Theme } from '@prisma/client';
 
 export const runtime = 'nodejs'; // Force Node.js runtime
 
@@ -42,7 +42,6 @@ export async function GET() {
 
     console.log('Fetching user data for:', session.user.email);
 
-    // Find or create user with proper error handling
     try {
       const prisma = await getPrismaClient();
       const user = await prisma.user.upsert({
@@ -59,6 +58,7 @@ export async function GET() {
           email: session.user.email,
           name: session.user.name || '',
           image: session.user.image || '',
+          theme: Theme.YELLOW,
           lastLogin: new Date(),
         },
         select: {
@@ -72,6 +72,7 @@ export async function GET() {
           theme: true,
           createdAt: true,
           updatedAt: true,
+          stripeCustomerId: true,
         },
       });
 
@@ -120,7 +121,6 @@ export async function GET() {
 
       throw error; // Let the outer catch handle other errors
     }
-
   } catch (error) {
     console.error('Error in user API:', error);
     
@@ -161,6 +161,10 @@ export async function PATCH(request: Request) {
     const updates = Object.keys(body)
       .filter(key => allowedFields.includes(key))
       .reduce((obj, key) => {
+        // Validate theme enum
+        if (key === 'theme' && !Object.values(Theme).includes(body[key])) {
+          throw new Error(`Invalid theme value: ${body[key]}`);
+        }
         obj[key] = body[key];
         return obj;
       }, {} as Record<string, any>);
@@ -192,6 +196,7 @@ export async function PATCH(request: Request) {
           theme: true,
           createdAt: true,
           updatedAt: true,
+          stripeCustomerId: true,
         },
       });
 
