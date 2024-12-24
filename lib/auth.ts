@@ -4,31 +4,41 @@ import { getServerSession } from 'next-auth/next';
 import Google from 'next-auth/providers/google';
 import prisma from '@/lib/prisma';
 
-if (!process.env.GOOGLE_CLIENT_ID) {
-  throw new Error('Missing GOOGLE_CLIENT_ID');
-}
+// Check required environment variables
+const requiredEnvVars = {
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+  NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+  NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+};
 
-if (!process.env.GOOGLE_CLIENT_SECRET) {
-  throw new Error('Missing GOOGLE_CLIENT_SECRET');
-}
+Object.entries(requiredEnvVars).forEach(([key, value]) => {
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${key}`);
+  }
+});
 
 export const authOptions: AuthOptions = {
   providers: [
     Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
-          prompt: "select_account"
+          prompt: "select_account",
+          access_type: "offline",
+          response_type: "code"
         }
       }
     }),
   ],
   debug: process.env.NODE_ENV === 'development',
+  secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async signIn({ user, account, profile }) {
       console.log('SignIn callback - user:', { email: user.email, name: user.name });
       console.log('SignIn callback - account:', { provider: account?.provider, type: account?.type });
+      console.log('SignIn callback - profile:', profile);
 
       if (!user.email) {
         console.error('No email provided in sign in callback');
@@ -62,6 +72,9 @@ export const authOptions: AuthOptions = {
       }
     },
     async session({ session, token }) {
+      console.log('Session callback - session:', session);
+      console.log('Session callback - token:', token);
+
       if (session.user?.email) {
         try {
           const user = await prisma.user.findUnique({
@@ -83,6 +96,9 @@ export const authOptions: AuthOptions = {
               username: user.username,
               createdAt: user.createdAt,
             };
+            console.log('Updated session with user data:', session.user);
+          } else {
+            console.error('User not found in database:', session.user.email);
           }
         } catch (error) {
           console.error('Error in session callback:', error);
@@ -90,7 +106,11 @@ export const authOptions: AuthOptions = {
       }
       return session;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
+      console.log('JWT callback - token:', token);
+      console.log('JWT callback - user:', user);
+      console.log('JWT callback - account:', account);
+
       if (user) {
         token.id = user.id;
       }
