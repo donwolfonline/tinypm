@@ -17,7 +17,6 @@ enum Theme {
   DAISY     // #FDFBF7 to #FFF9E5
   ROSE      // #FDF2F8 to #FBCFE8
   SLATE     // #475569 to #334155
-  
 }
 
 enum ContentType {
@@ -111,6 +110,7 @@ model User {
   theme              Theme          @default(YELLOW)
   pageTitle          String?
   pageDesc           String?
+  lastLogin          DateTime?      // Track last login time
   
   // Stripe-related fields
   stripeCustomerId   String?        @unique  // Stripe customer ID
