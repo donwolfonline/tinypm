@@ -2,10 +2,16 @@
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  ssl      = {
+    rejectUnauthorized = env("DATABASE_SSL_SELF_SIGNED") == "true" ? false : true
+  }
+  connectionPool = true
+  directUrl = env("DIRECT_URL") // Used for direct connection, e.g. migrations
 }
 
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["metrics"]
 }
 
 enum Theme {
