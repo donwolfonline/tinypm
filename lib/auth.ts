@@ -32,6 +32,10 @@ function validateEnv() {
 // Validate environment variables
 const isValid = validateEnv();
 
+if (!isValid) {
+  console.error('Authentication is not properly configured. Check environment variables.');
+}
+
 export const authOptions: AuthOptions = {
   providers: [
     Google({
@@ -40,7 +44,7 @@ export const authOptions: AuthOptions = {
       authorization: {
         params: {
           prompt: "select_account",
-          access_type: "online",
+          access_type: "offline", // Changed to offline to get refresh token
           response_type: "code",
           scope: "email profile"
         }
@@ -51,115 +55,127 @@ export const authOptions: AuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async signIn({ user, account, profile, email }) {
-      console.log('SignIn callback started', {
-        user: {
-          email: user?.email,
-          name: user?.name,
-          image: user?.image
-        },
-        account: {
-          provider: account?.provider,
-          type: account?.type,
-          scope: account?.scope
-        },
-        profile
-      });
-
       try {
-        // Always allow sign in - remove blocking conditions
-        if (user?.email) {
-          const existingUser = await prisma.user.findUnique({
-            where: { email: user.email },
-          });
-
-          if (!existingUser) {
-            await prisma.user.create({
-              data: {
-                email: user.email,
-                name: user.name || '',
-                image: user.image || '',
-              },
-            });
-            console.log('Created new user with email:', user.email);
-          } else {
-            console.log('Existing user found with email:', user.email);
-          }
+        if (!user?.email) {
+          console.error('No email provided by Google');
+          return false;
         }
-        
-        return true; // Always allow sign in
+
+        console.log('Sign in attempt for:', user.email);
+
+        // Check if user exists
+        const existingUser = await prisma.user.findUnique({
+          where: { email: user.email },
+          select: { id: true },
+        });
+
+        if (existingUser) {
+          console.log('Existing user found:', user.email);
+          // Update last login time
+          await prisma.user.update({
+            where: { email: user.email },
+            data: { lastLogin: new Date() },
+          });
+        } else {
+          console.log('Creating new user:', user.email);
+          // Create new user
+          await prisma.user.create({
+            data: {
+              email: user.email,
+              name: user.name || '',
+              image: user.image || null,
+              lastLogin: new Date(),
+            },
+          });
+        }
+
+        return true;
       } catch (error) {
         console.error('Error in signIn callback:', error);
-        // Don't block sign in on database errors
+        // Don't block sign in on database errors, but log them
         return true;
       }
     },
     async session({ session, token }) {
-      console.log('Session callback started');
-      console.log('Session:', session);
-      console.log('Token:', token);
+      try {
+        console.log('Session callback started');
 
-      if (session.user?.email) {
-        try {
-          const user = await prisma.user.findUnique({
-            where: { email: session.user.email },
-            select: {
-              id: true,
-              email: true,
-              name: true,
-              image: true,
-              username: true,
-              createdAt: true,
-            },
-          });
-
-          if (user) {
-            session.user = {
-              ...session.user,
-              id: user.id,
-              username: user.username,
-              createdAt: user.createdAt,
-            };
-            console.log('Updated session with user data:', session.user);
-          } else {
-            console.error('User not found in database:', session.user.email);
-          }
-        } catch (error) {
-          console.error('Error in session callback:', error);
+        if (!session?.user?.email) {
+          console.error('No user email in session');
+          return session;
         }
+
+        const user = await prisma.user.findUnique({
+          where: { email: session.user.email },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            image: true,
+            username: true,
+            createdAt: true,
+            lastLogin: true,
+          },
+        });
+
+        if (user) {
+          session.user = {
+            ...session.user,
+            id: user.id,
+            username: user.username,
+            createdAt: user.createdAt,
+            lastLogin: user.lastLogin,
+          };
+          console.log('Session updated with user data');
+        } else {
+          console.error('User not found in database:', session.user.email);
+          // Return session without extra data rather than failing
+        }
+
+        return session;
+      } catch (error) {
+        console.error('Error in session callback:', error);
+        // Return original session on error rather than failing
+        return session;
       }
-      return session;
     },
     async jwt({ token, user, account }) {
-      console.log('JWT callback started');
-      console.log('Token:', token);
-      console.log('User:', user);
-      console.log('Account:', account);
+      try {
+        console.log('JWT callback started');
 
-      if (user) {
-        token.id = user.id;
+        if (user) {
+          token.id = user.id;
+          token.email = user.email;
+        }
+
+        return token;
+      } catch (error) {
+        console.error('Error in JWT callback:', error);
+        // Return original token on error
+        return token;
       }
-      return token;
     },
   },
   events: {
     async signIn(message) {
-      console.log('SignIn event:', message);
+      console.log('Sign in successful:', message);
     },
     async signOut(message) {
-      console.log('SignOut event:', message);
-    }
+      console.log('Sign out successful:', message);
+    },
   },
   pages: {
     signIn: '/login',
     error: '/login',  // Redirect to login page with error
     signOut: '/login',
   },
-  session: {
-    strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
 };
 
 export async function getAuthSession() {
-  return await getServerSession(authOptions);
+  try {
+    return await getServerSession(authOptions);
+  } catch (error) {
+    console.error('Error getting auth session:', error);
+    return null;
+  }
 }

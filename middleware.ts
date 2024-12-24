@@ -1,6 +1,7 @@
 // middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getToken } from 'next-auth/jwt';
 
 /**
  * Core application configuration that handles:
@@ -20,6 +21,9 @@ const appConfig = {
         '/api/auth',
         '/api/auth/callback',
         '/api/auth/callback/google',
+        '/api/auth/signin',
+        '/api/auth/signout',
+        '/api/auth/session',
         '/_next',
         '/images',
         '/fonts',
@@ -50,129 +54,136 @@ const appConfig = {
       enforceHttps: true,
       minTlsVersion: '1.2',
       headers: {
-        hsts: 'max-age=31536000; includeSubDomains',
-        proto: 'https'
+        'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+        'X-Frame-Options': 'DENY',
+        'X-Content-Type-Options': 'nosniff',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
       }
     }
-  }
-} as const;
-
-// Utility functions
-const utils = {
-  /**
-   * Normalizes hostname by removing port and converting to lowercase
-   * Ensures consistent hostname comparison across the application
-   */
-  normalizeHostname(hostname: string): string {
-    return hostname.toLowerCase().split(':')[0];
-  },
-
-  /**
-   * Checks if a path should bypass domain verification
-   * Used for static assets and API routes that don't require domain checks
-   */
-  isPublicPath(pathname: string): boolean {
-    return appConfig.domains.public.paths.some(
-      publicPath => pathname === publicPath || pathname.startsWith(publicPath + '/')
-    );
-  },
-
-  /**
-   * Handles Cloudflare-specific SSL/TLS requirements
-   * Manages HTTPS enforcement and security headers
-   */
-  handleCloudflareSSL(request: NextRequest): NextResponse | null {
-    try {
-      const cfVisitor = request.headers.get('cf-visitor');
-      if (!cfVisitor) return null;
-
-      const { scheme } = JSON.parse(cfVisitor);
-      if (scheme === 'http') {
-        const httpsUrl = request.nextUrl.clone();
-        httpsUrl.protocol = 'https:';
-        return NextResponse.redirect(httpsUrl);
-      }
-    } catch (error) {
-      console.error('[SSL] Error parsing cf-visitor:', error);
-    }
-    return null;
   }
 };
 
-export async function middleware(request: NextRequest) {
-  const pathname = request.nextUrl.pathname;
-  
-  // Skip middleware for static files and special paths
-  if (pathname.match(/\\.(ico|png|jpg|jpeg|svg|css|js|woff|woff2)$/)) {
-    return NextResponse.next();
+/**
+ * Normalizes hostname by removing port and converting to lowercase
+ * Ensures consistent hostname comparison across the application
+ */
+function normalizeHostname(hostname: string): string {
+  return hostname.split(':')[0].toLowerCase();
+}
+
+/**
+ * Checks if a path should bypass domain verification
+ * Used for static assets and API routes that don't require domain checks
+ */
+function isPublicPath(pathname: string): boolean {
+  return appConfig.domains.public.paths.some(path => pathname.startsWith(path));
+}
+
+/**
+ * Handles Cloudflare-specific SSL/TLS requirements
+ * Manages HTTPS enforcement and security headers
+ */
+function handleCloudflareSSL(request: NextRequest): NextResponse | null {
+  const proto = request.headers.get('x-forwarded-proto');
+
+  // Redirect HTTP to HTTPS
+  if (appConfig.security.ssl.enforceHttps && proto === 'http') {
+    const secureUrl = 'https://' + request.headers.get('host') + request.nextUrl.pathname;
+    return NextResponse.redirect(secureUrl);
   }
 
-  // Skip middleware for not-found and 404 pages
-  if (pathname === '/404' || pathname === '/not-found') {
-    return NextResponse.next();
-  }
-
-  // Enhanced request logging
-  if (pathname.includes('/api/domains/verify')) {
-    console.log('[Middleware] Verification request:', {
-      method: request.method,
-      url: pathname,
-      headers: Object.fromEntries(request.headers),
-      cfRay: request.headers.get('cf-ray'),
-      timestamp: new Date().toISOString()
-    });
-  }
-
-  // API request logging
-  if (pathname.startsWith('/api/')) {
-    console.log('[API Request]', {
-      method: request.method,
-      path: pathname,
-      host: request.headers.get('host'),
-      timestamp: new Date().toISOString()
-    });
-  }
-
-  // SSL/TLS verification
-  const sslRedirect = utils.handleCloudflareSSL(request);
-  if (sslRedirect) return sslRedirect;
-
-  const hostname = request.headers.get('host') || '';
-  const normalizedHost = utils.normalizeHostname(hostname);
-
-  // Allow access for configured domains
-  if (appConfig.domains.public.allowed.has(normalizedHost)) {
-    // Public path handling
-    if (utils.isPublicPath(pathname)) {
-      const response = NextResponse.next();
-      response.headers.set('Strict-Transport-Security', appConfig.security.ssl.headers.hsts);
-      return response;
-    }
-  }
-
-  // Handle invalid domains or paths
-  console.log('[Domain] Invalid access attempt:', {
-    host: hostname,
-    path: pathname,
-    timestamp: new Date().toISOString()
+  // Add security headers
+  const response = new NextResponse();
+  Object.entries(appConfig.security.ssl.headers).forEach(([key, value]) => {
+    response.headers.set(key, value);
   });
 
-  // For invalid paths on valid domains, show the 404 page
-  if (appConfig.domains.public.allowed.has(normalizedHost)) {
-    return NextResponse.next();
-  }
+  return null;
+}
 
-  // For invalid domains, redirect to the homepage
-  const url = request.nextUrl.clone();
-  url.pathname = '/';
-  url.host = 'tinypm.vercel.app';
-  url.protocol = 'https:';
-  return NextResponse.redirect(url);
+/**
+ * Checks if a request should be protected by authentication
+ */
+function isProtectedRoute(pathname: string): boolean {
+  // Add routes that require authentication
+  const protectedPaths = ['/dashboard', '/api/user', '/api/subscription'];
+  return protectedPaths.some(path => pathname.startsWith(path));
+}
+
+export async function middleware(request: NextRequest) {
+  try {
+    const { pathname } = request.nextUrl;
+    const hostname = normalizeHostname(request.headers.get('host') || '');
+
+    // Handle SSL/TLS
+    const sslResponse = handleCloudflareSSL(request);
+    if (sslResponse) return sslResponse;
+
+    // Skip domain verification for public paths
+    if (!isPublicPath(pathname)) {
+      // Verify domain is allowed
+      if (!appConfig.domains.public.allowed.has(hostname)) {
+        console.error('Invalid domain access attempt:', hostname);
+        return new NextResponse(null, { status: 403 });
+      }
+    }
+
+    // Check authentication for protected routes
+    if (isProtectedRoute(pathname)) {
+      try {
+        const token = await getToken({
+          req: request,
+          secret: process.env.NEXTAUTH_SECRET,
+        });
+
+        if (!token) {
+          console.log('Unauthorized access attempt:', pathname);
+          
+          // For API routes, return 401
+          if (pathname.startsWith('/api/')) {
+            return new NextResponse(
+              JSON.stringify({ error: 'Unauthorized' }),
+              {
+                status: 401,
+                headers: { 'Content-Type': 'application/json' },
+              }
+            );
+          }
+
+          // For other routes, redirect to login
+          const url = new URL('/login', request.url);
+          url.searchParams.set('callbackUrl', pathname);
+          return NextResponse.redirect(url);
+        }
+      } catch (error) {
+        console.error('Auth error in middleware:', error);
+        return new NextResponse(
+          JSON.stringify({ error: 'Internal server error' }),
+          {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
+      }
+    }
+
+    // Continue with the request
+    return NextResponse.next();
+  } catch (error) {
+    console.error('Middleware error:', error);
+    return new NextResponse(
+      JSON.stringify({ error: 'Internal server error' }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
 }
 
 export const config = {
   matcher: [
     // Match all paths except static files
     '/((?!_next/static|_next/image|favicon.ico).*)',
-  ]
+  ],
 };
