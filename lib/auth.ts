@@ -46,27 +46,28 @@ export const authOptions: AuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
-          prompt: "select_account",
           access_type: "offline",
-          response_type: "code"
+          response_type: "code",
+          scope: "openid email profile"
         }
       }
     }),
   ],
-  debug: process.env.NODE_ENV === 'development',
+  debug: true, // Enable debug logs
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
-    async signIn({ user, account, profile }) {
-      console.log('SignIn callback - user:', { email: user.email, name: user.name });
-      console.log('SignIn callback - account:', { provider: account?.provider, type: account?.type });
-      console.log('SignIn callback - profile:', profile);
-
-      if (!user.email) {
-        console.error('No email provided in sign in callback');
-        return false;
-      }
+    async signIn({ user, account, profile, email }) {
+      console.log('SignIn callback started');
+      console.log('User:', { email: user.email, name: user.name });
+      console.log('Account:', { provider: account?.provider, type: account?.type });
+      console.log('Profile:', profile);
 
       try {
+        if (!user.email) {
+          console.error('No email provided by Google');
+          return false;
+        }
+
         // Check if user exists
         const existingUser = await prisma.user.findUnique({
           where: { email: user.email },
@@ -93,8 +94,9 @@ export const authOptions: AuthOptions = {
       }
     },
     async session({ session, token }) {
-      console.log('Session callback - session:', session);
-      console.log('Session callback - token:', token);
+      console.log('Session callback started');
+      console.log('Session:', session);
+      console.log('Token:', token);
 
       if (session.user?.email) {
         try {
@@ -128,15 +130,27 @@ export const authOptions: AuthOptions = {
       return session;
     },
     async jwt({ token, user, account }) {
-      console.log('JWT callback - token:', token);
-      console.log('JWT callback - user:', user);
-      console.log('JWT callback - account:', account);
+      console.log('JWT callback started');
+      console.log('Token:', token);
+      console.log('User:', user);
+      console.log('Account:', account);
 
       if (user) {
         token.id = user.id;
       }
       return token;
     },
+  },
+  events: {
+    async signIn(message) {
+      console.log('SignIn event:', message);
+    },
+    async signOut(message) {
+      console.log('SignOut event:', message);
+    },
+    async error(message) {
+      console.error('Auth error event:', message);
+    }
   },
   pages: {
     signIn: '/login',

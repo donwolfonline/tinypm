@@ -5,6 +5,14 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
 import Image from 'next/image';
 
+// Error messages mapping
+const errorMessages: { [key: string]: string } = {
+  AccessDenied: 'Access was denied. Please make sure you select a Google account and grant the required permissions.',
+  Configuration: 'There is a problem with the server configuration.',
+  Verification: 'The verification failed. Please try again.',
+  Default: 'An error occurred during sign in. Please try again.',
+};
+
 function LoginContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -13,14 +21,14 @@ function LoginContent() {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    console.log('Session status:', status);
-    console.log('Session data:', session);
+    console.log('Current session status:', status);
+    console.log('Current session:', session);
     
     // Get error from URL if present
-    const errorMessage = searchParams.get('error');
-    if (errorMessage) {
-      setError(errorMessage);
-      console.error('Auth error from URL:', errorMessage);
+    const errorCode = searchParams.get('error');
+    if (errorCode) {
+      console.error('Auth error from URL:', errorCode);
+      setError(errorMessages[errorCode] || errorMessages.Default);
     }
 
     if (session?.user) {
@@ -46,13 +54,13 @@ function LoginContent() {
       
       if (result?.error) {
         console.error('Sign in error:', result.error);
-        setError(result.error);
+        setError(errorMessages[result.error] || errorMessages.Default);
       } else {
         console.log('Sign in successful:', result);
       }
     } catch (error) {
       console.error('Sign in error:', error);
-      setError('An error occurred during sign in');
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -132,7 +140,14 @@ function LoginContent() {
           <div className="space-y-4">
             {error && (
               <div className="mb-4 rounded-lg bg-red-100 p-4 text-center text-red-600">
-                {error}
+                <p className="font-medium">Error</p>
+                <p className="text-sm">{error}</p>
+                <button
+                  onClick={() => setError(null)}
+                  className="mt-2 text-sm text-red-800 underline hover:no-underline"
+                >
+                  Dismiss
+                </button>
               </div>
             )}
             <button
