@@ -18,9 +18,9 @@ export function SubscriptionSection({ subscription }: SubscriptionSectionProps) 
     console.log('SubscriptionSection received:', { subscription });
   }
 
-  const isValidSubscription = subscription && 
+  const isValidSubscription = Boolean(subscription && 
     subscription.status === 'ACTIVE' && 
-    new Date(subscription.currentPeriodEnd) > new Date();
+    new Date(subscription.currentPeriodEnd) > new Date());
 
   const handleCheckout = async (interval: 'month' | 'year') => {
     try {
