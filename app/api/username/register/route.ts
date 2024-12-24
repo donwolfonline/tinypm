@@ -76,6 +76,8 @@ export async function POST(req: Request) {
   try {
     // Get session
     const session = await getAuthSession();
+    
+    // Check if we have a valid session with email
     if (!session?.user?.email) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -113,19 +115,35 @@ export async function POST(req: Request) {
       );
     }
 
+    // Get Prisma client
     const prisma = await getPrismaClient();
 
-    // First check if username is taken
-    const existingUser = await prisma.user.findFirst({
+    // First check if the user exists
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // Then check if username is taken
+    const existingUsername = await prisma.user.findFirst({
       where: {
         username: {
           equals: username,
           mode: 'insensitive',
         },
+        NOT: {
+          id: user.id, // Exclude current user
+        },
       },
     });
 
-    if (existingUser) {
+    if (existingUsername) {
       return NextResponse.json(
         { error: 'Username is already taken' },
         { status: 409 }
@@ -134,10 +152,10 @@ export async function POST(req: Request) {
 
     // Update the user
     const updatedUser = await prisma.user.update({
-      where: { email: session.user.email },
+      where: { id: user.id }, // Use ID instead of email
       data: { 
         username,
-        lastLogin: new Date(), // Update last login time
+        lastLogin: new Date(),
       },
       select: {
         id: true,
@@ -160,7 +178,6 @@ export async function POST(req: Request) {
     console.error('Error in username registration:', error);
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      // P2002 is unique constraint violation
       if (error.code === 'P2002') {
         return NextResponse.json(
           { error: 'Username is already taken' },
@@ -168,13 +185,24 @@ export async function POST(req: Request) {
         );
       }
 
-      // P2025 is not found error
       if (error.code === 'P2025') {
         return NextResponse.json(
           { error: 'User not found' },
           { status: 404 }
         );
       }
+
+      return NextResponse.json(
+        { error: `Database error: ${error.message}` },
+        { status: 500 }
+      );
+    }
+
+    if (error instanceof Prisma.PrismaClientValidationError) {
+      return NextResponse.json(
+        { error: 'Invalid data format' },
+        { status: 400 }
+      );
     }
 
     return NextResponse.json(
