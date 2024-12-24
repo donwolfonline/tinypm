@@ -15,6 +15,7 @@ const appConfig = {
     public: {
       // Paths that bypass domain verification (prefix matching)
       paths: [
+        '/',
         '/api',
         '/_next',
         '/images',
@@ -22,7 +23,13 @@ const appConfig = {
         '/favicon.ico',
         '/dashboard',
         '/404',
-        '/not-found'
+        '/not-found',
+        '/login',
+        '/register',
+        '/about',
+        '/pricing',
+        '/terms',
+        '/privacy'
       ],
       // Development domains with exact matching for performance
       allowed: new Set([
@@ -63,7 +70,7 @@ const utils = {
    */
   isPublicPath(pathname: string): boolean {
     return appConfig.domains.public.paths.some(
-      publicPath => pathname.startsWith(publicPath)
+      publicPath => pathname === publicPath || pathname.startsWith(publicPath + '/')
     );
   },
 
@@ -90,16 +97,23 @@ const utils = {
 };
 
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  
+  // Skip middleware for static files and special paths
+  if (pathname.match(/\\.(ico|png|jpg|jpeg|svg|css|js|woff|woff2)$/)) {
+    return NextResponse.next();
+  }
+
   // Skip middleware for not-found and 404 pages
-  if (request.nextUrl.pathname === '/404' || request.nextUrl.pathname === '/not-found') {
+  if (pathname === '/404' || pathname === '/not-found') {
     return NextResponse.next();
   }
 
   // Enhanced request logging
-  if (request.nextUrl.pathname.includes('/api/domains/verify')) {
+  if (pathname.includes('/api/domains/verify')) {
     console.log('[Middleware] Verification request:', {
       method: request.method,
-      url: request.nextUrl.pathname,
+      url: pathname,
       headers: Object.fromEntries(request.headers),
       cfRay: request.headers.get('cf-ray'),
       timestamp: new Date().toISOString()
@@ -107,10 +121,10 @@ export async function middleware(request: NextRequest) {
   }
 
   // API request logging
-  if (request.nextUrl.pathname.startsWith('/api/')) {
+  if (pathname.startsWith('/api/')) {
     console.log('[API Request]', {
       method: request.method,
-      path: request.nextUrl.pathname,
+      path: pathname,
       host: request.headers.get('host'),
       timestamp: new Date().toISOString()
     });
@@ -120,73 +134,42 @@ export async function middleware(request: NextRequest) {
   const sslRedirect = utils.handleCloudflareSSL(request);
   if (sslRedirect) return sslRedirect;
 
-  // Public path handling
-  if (utils.isPublicPath(request.nextUrl.pathname)) {
-    const response = NextResponse.next();
-    response.headers.set('Strict-Transport-Security', appConfig.security.ssl.headers.hsts);
-    return response;
-  }
-
   const hostname = request.headers.get('host') || '';
   const normalizedHost = utils.normalizeHostname(hostname);
 
-  // Development environment handling
-  if (process.env.NODE_ENV === 'development' && 
-      appConfig.domains.public.allowed.has(hostname)) {
+  // Allow access for configured domains
+  if (appConfig.domains.public.allowed.has(normalizedHost)) {
+    // Public path handling
+    if (utils.isPublicPath(pathname)) {
+      const response = NextResponse.next();
+      response.headers.set('Strict-Transport-Security', appConfig.security.ssl.headers.hsts);
+      return response;
+    }
+  }
+
+  // Handle invalid domains or paths
+  console.log('[Domain] Invalid access attempt:', {
+    host: hostname,
+    path: pathname,
+    timestamp: new Date().toISOString()
+  });
+
+  // For invalid paths on valid domains, show the 404 page
+  if (appConfig.domains.public.allowed.has(normalizedHost)) {
     return NextResponse.next();
   }
 
-  // Primary domain and subdomain handling
-  if (normalizedHost === 'tiny.pm' || normalizedHost.endsWith('.tiny.pm')) {
-    const response = NextResponse.next();
-    response.headers.set('Strict-Transport-Security', appConfig.security.ssl.headers.hsts);
-    return response;
-  }
-
-  try {
-    // Production custom domain verification
-    if (process.env.NODE_ENV === 'production') {
-      const verifyUrl = new URL('/api/domains/verify', request.nextUrl.origin);
-      const customDomain = await fetch(verifyUrl, {
-        headers: { 
-          host: normalizedHost,
-          'x-real-ip': request.headers.get('x-real-ip') || '',
-          'x-forwarded-for': request.headers.get('x-forwarded-for') || '',
-          'x-forwarded-proto': appConfig.security.ssl.headers.proto,
-        }
-      });
-
-      if (!customDomain.ok) {
-        console.error('[Middleware] Domain verification failed:', {
-          domain: normalizedHost,
-          status: customDomain.status,
-          timestamp: new Date().toISOString()
-        });
-        return NextResponse.redirect(new URL('/404', request.url));
-      }
-    }
-
-    // Set security headers for verified requests
-    const response = NextResponse.next();
-    response.headers.set('Strict-Transport-Security', appConfig.security.ssl.headers.hsts);
-    response.headers.set('X-Forwarded-Proto', appConfig.security.ssl.headers.proto);
-    return response;
-
-  } catch (error) {
-    console.error('[Middleware] Error:', {
-      error,
-      domain: normalizedHost,
-      timestamp: new Date().toISOString()
-    });
-    return NextResponse.redirect(new URL('/500', request.url));
-  }
+  // For invalid domains, redirect to the homepage
+  const url = request.nextUrl.clone();
+  url.pathname = '/';
+  url.host = 'tinypm.vercel.app';
+  url.protocol = 'https:';
+  return NextResponse.redirect(url);
 }
 
 export const config = {
   matcher: [
     // Match all paths except static files
-    '/((?!_next|static|.*\\..*|favicon.ico).*)',
-    // Include API routes
-    '/api/:path*'
-  ],
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ]
 };
