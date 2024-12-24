@@ -4,6 +4,8 @@ import { getAuthSession } from '@/lib/auth';
 import { Filter } from 'bad-words';
 import { Prisma } from '@prisma/client';
 
+export const runtime = 'nodejs'; // Force Node.js runtime
+
 // Initialize the filter with custom options
 const filter = new Filter();
 
@@ -221,6 +223,12 @@ export async function POST(req: Request) {
           email: true,
           username: true,
           image: true,
+          theme: true,
+          pageTitle: true,
+          pageDesc: true,
+          createdAt: true,
+          updatedAt: true,
+          stripeCustomerId: true,
         },
       });
 
