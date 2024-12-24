@@ -2,47 +2,10 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 
-// Helper function to check database connection
-async function checkDatabaseConnection() {
-  try {
-    // Log the DATABASE_URL (without sensitive info) for debugging
-    const dbUrl = process.env.DATABASE_URL || '';
-    console.log('Database URL pattern:', dbUrl.replace(/\/\/[^@]*@/, '//<credentials>@'));
-
-    // Try a simple query
-    const result = await prisma.$queryRaw`SELECT 1 as test`;
-    console.log('Database connection test result:', result);
-    return true;
-  } catch (error) {
-    console.error('Database connection check failed:', {
-      error: error instanceof Error ? {
-        name: error.name,
-        message: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      } : 'Unknown error',
-      prismaVersion: Prisma.prismaVersion.client,
-      nodeVersion: process.version,
-    });
-    return false;
-  }
-}
-
 export async function POST(req: Request) {
   console.log('Username check request received');
   
   try {
-    // Check database connection first
-    console.log('Checking database connection...');
-    const isConnected = await checkDatabaseConnection();
-    if (!isConnected) {
-      console.error('Database connection failed');
-      return NextResponse.json(
-        { error: 'Database connection error', details: 'Could not connect to the database' },
-        { status: 503 }
-      );
-    }
-    console.log('Database connection successful');
-
     // Parse request body
     let username: string;
     try {
@@ -104,15 +67,22 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check if username exists
+    // Try to connect to the database and check if username exists
     try {
-      console.log('Checking if username exists:', username);
-      const existingUser = await prisma.user.findUnique({
-        where: { username },
-        select: { id: true }, // Only select id for performance
-      });
+      console.log('Attempting database query...');
+      
+      // Use a raw query to check if the username exists
+      const result = await prisma.$queryRaw`
+        SELECT EXISTS (
+          SELECT 1 FROM "User" WHERE username = ${username}
+        ) as exists
+      `;
+      
+      console.log('Database query result:', result);
 
-      if (existingUser) {
+      const exists = Array.isArray(result) && result.length > 0 && result[0].exists;
+      
+      if (exists) {
         console.log('Username already taken:', username);
         return NextResponse.json(
           { error: 'Username taken', details: 'This username is already in use' },
@@ -123,59 +93,41 @@ export async function POST(req: Request) {
       console.log('Username is available:', username);
       return NextResponse.json({ available: true, username });
     } catch (error) {
-      console.error('Database error checking username:', {
-        username,
+      console.error('Database error:', {
         error: error instanceof Error ? {
           name: error.name,
           message: error.message,
-          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-        } : 'Unknown error'
+          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+        } : 'Unknown error',
+        prismaVersion: Prisma.prismaVersion.client,
+        nodeVersion: process.version,
       });
 
-      // Handle Prisma-specific errors
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        console.error('Prisma known error:', {
-          code: error.code,
-          message: error.message,
-          meta: error.meta,
-        });
+      // Check if it's a connection error
+      if (error instanceof Error && 
+          (error.message.includes('connect ECONNREFUSED') || 
+           error.message.includes('failed to connect'))) {
         return NextResponse.json(
-          { error: 'Database error', code: error.code, details: error.message },
-          { status: 500 }
-        );
-      }
-
-      if (error instanceof Prisma.PrismaClientInitializationError) {
-        console.error('Prisma initialization error:', error.message);
-        return NextResponse.json(
-          { error: 'Database initialization error', details: error.message },
+          { error: 'Database connection error', details: 'Could not connect to the database' },
           { status: 503 }
-        );
-      }
-
-      if (error instanceof Prisma.PrismaClientRustPanicError) {
-        console.error('Prisma client panic error:', error.message);
-        return NextResponse.json(
-          { error: 'Critical database error', details: error.message },
-          { status: 500 }
         );
       }
 
       return NextResponse.json(
         {
-          error: 'Internal server error',
-          details: error instanceof Error ? error.message : 'Unknown error checking username',
+          error: 'Database error',
+          details: error instanceof Error ? error.message : 'Unknown database error',
         },
         { status: 500 }
       );
     }
   } catch (error) {
-    console.error('Unhandled error in username API:', {
+    console.error('Unhandled error:', {
       error: error instanceof Error ? {
         name: error.name,
         message: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      } : 'Unknown error'
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      } : 'Unknown error',
     });
     
     return NextResponse.json(
