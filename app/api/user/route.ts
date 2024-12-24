@@ -36,34 +36,47 @@ export async function GET() {
 
     console.log('Fetching user data for:', session.user.email);
 
-    // Find or create user
-    const user = await prisma.user.upsert({
-      where: { email: session.user.email },
-      update: {}, // No updates needed
-      create: {
-        email: session.user.email,
-        name: session.user.name,
-        image: session.user.image,
-        lastLogin: new Date(),
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
-        pageTitle: true,
-        pageDesc: true,
-        theme: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+    // Find or create user with proper error handling
+    try {
+      const user = await prisma.user.upsert({
+        where: { 
+          email: session.user.email 
+        },
+        update: {
+          lastLogin: new Date(),
+          // Update name and image if they changed in the session
+          ...(session.user.name && { name: session.user.name }),
+          ...(session.user.image && { image: session.user.image })
+        },
+        create: {
+          email: session.user.email,
+          name: session.user.name || '',
+          image: session.user.image || '',
+          lastLogin: new Date(),
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          username: true,
+          pageTitle: true,
+          pageDesc: true,
+          theme: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log('User data:', user);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('User data:', user);
+      }
+
+      return NextResponse.json({ user });
+    } catch (error) {
+      console.error('Error upserting user:', error);
+      throw error; // Let the outer catch handle it
     }
-
-    return NextResponse.json({ user });
 
   } catch (error) {
     console.error('Error in user API:', error);
@@ -150,6 +163,7 @@ export async function PATCH(request: Request) {
         name: true,
         email: true,
         image: true,
+        username: true,
         pageTitle: true,
         pageDesc: true,
         theme: true,

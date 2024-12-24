@@ -35,46 +35,59 @@ export async function GET() {
 
     console.log('Fetching subscription for user:', session.user.email);
 
-    // Find or create user
-    const user = await prisma.user.upsert({
-      where: { email: session.user.email },
-      update: {}, // No updates needed
-      create: {
-        email: session.user.email,
-        name: session.user.name,
-        image: session.user.image,
-        lastLogin: new Date(),
-      },
-      select: { id: true },
-    });
+    // Find or create user with proper error handling
+    try {
+      const user = await prisma.user.upsert({
+        where: { 
+          email: session.user.email 
+        },
+        update: {
+          lastLogin: new Date(),
+          // Update name and image if they changed in the session
+          ...(session.user.name && { name: session.user.name }),
+          ...(session.user.image && { image: session.user.image })
+        },
+        create: {
+          email: session.user.email,
+          name: session.user.name || '',
+          image: session.user.image || '',
+          lastLogin: new Date(),
+        },
+        select: { id: true },
+      });
 
-    // Fetch subscription with user information
-    const subscription = await prisma.subscription.findFirst({
-      where: {
-        userId: user.id,
-      },
-      select: {
-        id: true,
-        status: true,
-        stripeSubscriptionId: true,
-        currentPeriodStart: true,
-        currentPeriodEnd: true,
-        cancelAtPeriodEnd: true,
-        user: {
-          select: {
-            id: true,
-            email: true,
+      // Fetch subscription with user information
+      const subscription = await prisma.subscription.findFirst({
+        where: {
+          userId: user.id,
+        },
+        select: {
+          id: true,
+          status: true,
+          stripeSubscriptionId: true,
+          currentPeriodStart: true,
+          currentPeriodEnd: true,
+          cancelAtPeriodEnd: true,
+          user: {
+            select: {
+              id: true,
+              email: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Fetched subscription:', subscription);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Fetched subscription:', subscription);
+      }
+
+      // Return null if no subscription found (this is a valid state)
+      return NextResponse.json({ subscription: subscription || null });
+    } catch (error) {
+      console.error('Error upserting user:', error);
+      throw error; // Let the outer catch handle it
     }
 
-    // Return null if no subscription found (this is a valid state)
-    return NextResponse.json({ subscription: subscription || null });
   } catch (error) {
     console.error('Error in subscription API:', error);
     
