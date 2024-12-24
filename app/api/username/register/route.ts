@@ -70,19 +70,19 @@ function validateUsername(username: string): { isValid: boolean; error?: string 
     return { isValid: false, error: 'Username must be no longer than 20 characters' };
   }
 
-  // Check format (alphanumeric and hyphens only)
-  if (!/^[a-zA-Z0-9-]+$/.test(username)) {
-    return { isValid: false, error: 'Username can only contain letters, numbers, and hyphens' };
+  // Check format (alphanumeric, underscores, and hyphens only)
+  if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+    return { isValid: false, error: 'Username can only contain letters, numbers, underscores, and hyphens' };
   }
 
-  // Check for consecutive hyphens
-  if (username.includes('--')) {
-    return { isValid: false, error: 'Username cannot contain consecutive hyphens' };
+  // Check for consecutive special characters
+  if (/[-_]{2,}/.test(username)) {
+    return { isValid: false, error: 'Username cannot contain consecutive special characters' };
   }
 
   // Check start and end characters
-  if (username.startsWith('-') || username.endsWith('-')) {
-    return { isValid: false, error: 'Username cannot start or end with a hyphen' };
+  if (/^[-_]|[-_]$/.test(username)) {
+    return { isValid: false, error: 'Username cannot start or end with special characters' };
   }
 
   // Check reserved usernames
@@ -122,26 +122,34 @@ async function checkDatabaseConnection() {
 }
 
 export async function POST(req: Request) {
+  console.log('Username registration started');
+  
   try {
     // Check database connection first
     const isConnected = await checkDatabaseConnection();
     if (!isConnected) {
+      console.error('Database connection failed during username registration');
       return NextResponse.json(
         { error: 'Database connection error', details: 'Could not connect to the database' },
         { status: 503 }
       );
     }
 
+    // Get session
     const session = await getAuthSession();
     if (!session?.user?.email) {
+      console.log('No authenticated session found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    console.log('Processing username registration for:', session.user.email);
 
     // Parse request body
     let body;
     try {
       body = await req.json();
     } catch (e) {
+      console.error('Invalid request body:', e);
       return NextResponse.json(
         { error: 'Invalid request format' },
         { status: 400 }
@@ -151,15 +159,19 @@ export async function POST(req: Request) {
     const { username } = body;
 
     if (!username) {
+      console.log('No username provided');
       return NextResponse.json(
         { error: 'Username is required' },
         { status: 400 }
       );
     }
 
+    console.log('Validating username:', username);
+
     // Validate username format
     const validation = validateUsername(username);
     if (!validation.isValid) {
+      console.log('Username validation failed:', validation.error);
       return NextResponse.json(
         { error: validation.error },
         { status: 400 }
@@ -168,6 +180,7 @@ export async function POST(req: Request) {
 
     // Check for offensive content
     if (containsOffensiveContent(username)) {
+      console.log('Username contains inappropriate content:', username);
       return NextResponse.json(
         { error: 'Username contains inappropriate content' },
         { status: 400 }
@@ -175,9 +188,11 @@ export async function POST(req: Request) {
     }
 
     try {
+      console.log('Getting Prisma client');
       const prisma = await getPrismaClient();
       
-      // Check if username is already taken
+      console.log('Checking for existing username');
+      // Check if username is already taken (case-insensitive)
       const existingUser = await prisma.user.findFirst({
         where: {
           username: {
@@ -188,12 +203,14 @@ export async function POST(req: Request) {
       });
 
       if (existingUser) {
+        console.log('Username already taken:', username);
         return NextResponse.json(
           { error: 'Username is already taken' },
           { status: 409 }
         );
       }
 
+      console.log('Updating user with new username');
       // Update user with new username
       const updatedUser = await prisma.user.update({
         where: { email: session.user.email },
@@ -207,27 +224,72 @@ export async function POST(req: Request) {
         },
       });
 
+      console.log('Username registration successful:', updatedUser.username);
       return NextResponse.json({ user: updatedUser });
     } catch (error) {
-      console.error('Database error:', error);
+      console.error('Database error during username registration:', error);
 
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        // Log specific Prisma error details
+        console.error('Prisma error details:', {
+          code: error.code,
+          meta: error.meta,
+          message: error.message,
+          clientVersion: error.clientVersion,
+        });
+
         if (error.code === 'P2002') {
           return NextResponse.json(
             { error: 'Username is already taken' },
             { status: 409 }
           );
         }
+
+        if (error.code === 'P2025') {
+          return NextResponse.json(
+            { error: 'User not found' },
+            { status: 404 }
+          );
+        }
+
         return NextResponse.json(
-          { error: 'Database error', code: error.code },
+          { 
+            error: 'Database error',
+            code: error.code,
+            details: error.message
+          },
           { status: 500 }
+        );
+      }
+
+      if (error instanceof Prisma.PrismaClientValidationError) {
+        console.error('Prisma validation error:', error.message);
+        return NextResponse.json(
+          { error: 'Invalid data format', details: error.message },
+          { status: 400 }
+        );
+      }
+
+      if (error instanceof Prisma.PrismaClientInitializationError) {
+        console.error('Prisma initialization error:', error.message);
+        return NextResponse.json(
+          { error: 'Database initialization error', details: error.message },
+          { status: 503 }
         );
       }
 
       throw error; // Let the outer catch handle other errors
     }
   } catch (error) {
-    console.error('Error in username registration:', error);
+    // Log the full error with stack trace
+    console.error('Unhandled error in username registration:', {
+      error: error instanceof Error ? {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      } : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
     
     return NextResponse.json(
       { 
