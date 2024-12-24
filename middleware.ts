@@ -17,6 +17,9 @@ const appConfig = {
       paths: [
         '/',
         '/api',
+        '/api/auth',
+        '/api/auth/callback',
+        '/api/auth/callback/google',
         '/_next',
         '/images',
         '/fonts',
