@@ -35,16 +35,18 @@ export async function GET() {
 
     console.log('Fetching subscription for user:', session.user.email);
 
-    // First, ensure the user exists
-    const user = await prisma.user.findUnique({
+    // Find or create user
+    const user = await prisma.user.upsert({
       where: { email: session.user.email },
+      update: {}, // No updates needed
+      create: {
+        email: session.user.email,
+        name: session.user.name,
+        image: session.user.image,
+        lastLogin: new Date(),
+      },
       select: { id: true },
     });
-
-    if (!user) {
-      console.log('User not found:', session.user.email);
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
 
     // Fetch subscription with user information
     const subscription = await prisma.subscription.findFirst({

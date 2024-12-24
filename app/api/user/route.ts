@@ -36,8 +36,16 @@ export async function GET() {
 
     console.log('Fetching user data for:', session.user.email);
 
-    const user = await prisma.user.findUnique({
+    // Find or create user
+    const user = await prisma.user.upsert({
       where: { email: session.user.email },
+      update: {}, // No updates needed
+      create: {
+        email: session.user.email,
+        name: session.user.name,
+        image: session.user.image,
+        lastLogin: new Date(),
+      },
       select: {
         id: true,
         name: true,
@@ -51,16 +59,12 @@ export async function GET() {
       },
     });
 
-    if (!user) {
-      console.log('User not found:', session.user.email);
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
     if (process.env.NODE_ENV === 'development') {
-      console.log('Fetched user data:', user);
+      console.log('User data:', user);
     }
 
-    return NextResponse.json(user);
+    return NextResponse.json({ user });
+
   } catch (error) {
     console.error('Error in user API:', error);
     
@@ -94,9 +98,9 @@ export async function GET() {
     }
 
     return NextResponse.json(
-      {
+      { 
         error: 'Failed to fetch user',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        details: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
     );
@@ -105,50 +109,42 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
   try {
-    // Check database connection first
-    const isConnected = await checkDatabaseConnection();
-    if (!isConnected) {
-      return NextResponse.json(
-        { error: 'Database connection error', details: 'Could not connect to the database' },
-        { status: 503 }
-      );
-    }
-
     const session = await getAuthSession();
 
     if (!session?.user?.email) {
-      console.log('No authenticated session found for update');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const data = await request.json();
-    const updateData: Record<string, unknown> = {};
-
-    // Validate and sanitize input data
-    if (data.name !== undefined) {
-      if (!data.name?.trim()) {
-        return NextResponse.json({ error: 'Name cannot be empty' }, { status: 400 });
-      }
-      updateData.name = data.name.trim();
+    let body;
+    try {
+      body = await request.json();
+    } catch (e) {
+      return NextResponse.json(
+        { error: 'Invalid request format' },
+        { status: 400 }
+      );
     }
 
-    if (data.pageTitle !== undefined) {
-      updateData.pageTitle = data.pageTitle.trim();
+    // Validate fields
+    const allowedFields = ['name', 'pageTitle', 'pageDesc', 'theme'];
+    const updates = Object.keys(body)
+      .filter(key => allowedFields.includes(key))
+      .reduce((obj, key) => {
+        obj[key] = body[key];
+        return obj;
+      }, {} as Record<string, any>);
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json(
+        { error: 'No valid fields to update' },
+        { status: 400 }
+      );
     }
 
-    if (data.pageDesc !== undefined) {
-      updateData.pageDesc = data.pageDesc.trim();
-    }
-
-    if (data.theme !== undefined) {
-      updateData.theme = data.theme;
-    }
-
-    console.log('Updating user data for:', session.user.email, updateData);
-
-    const updatedUser = await prisma.user.update({
+    // Update user
+    const user = await prisma.user.update({
       where: { email: session.user.email },
-      data: updateData,
+      data: updates,
       select: {
         id: true,
         name: true,
@@ -162,51 +158,24 @@ export async function PATCH(request: Request) {
       },
     });
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Updated user data:', updatedUser);
-    }
-
     // Revalidate user data
     revalidateTag('user');
 
-    return NextResponse.json(updatedUser);
+    return NextResponse.json({ user });
   } catch (error) {
     console.error('Error updating user:', error);
 
-    // Handle Prisma-specific errors
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      console.error('Prisma known error:', {
-        code: error.code,
-        message: error.message,
-        meta: error.meta,
-      });
-      return NextResponse.json(
-        { error: 'Database error', code: error.code, details: error.message },
-        { status: 500 }
-      );
-    }
-
-    if (error instanceof Prisma.PrismaClientInitializationError) {
-      console.error('Prisma initialization error:', error.message);
-      return NextResponse.json(
-        { error: 'Database initialization error', details: error.message },
-        { status: 503 }
-      );
-    }
-
-    if (error instanceof Prisma.PrismaClientRustPanicError) {
-      console.error('Prisma client panic error:', error.message);
-      return NextResponse.json(
-        { error: 'Critical database error', details: error.message },
-        { status: 500 }
-      );
+      if (error.code === 'P2025') {
+        return NextResponse.json(
+          { error: 'User not found' },
+          { status: 404 }
+        );
+      }
     }
 
     return NextResponse.json(
-      {
-        error: 'Failed to update user',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
+      { error: 'Failed to update user' },
       { status: 500 }
     );
   }
