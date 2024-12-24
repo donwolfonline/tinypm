@@ -122,11 +122,17 @@ async function createPrismaClient(): Promise<PrismaClient> {
 // Initialize Prisma client with retries
 let prismaPromise: Promise<PrismaClient>;
 
-if (process.env.NODE_ENV === 'production') {
-  // In production, create a new client with retries
+// Check if we're in edge runtime
+const isEdgeRuntime = process.env.NEXT_RUNTIME === 'edge';
+
+if (isEdgeRuntime) {
+  // In edge runtime, create a new client for each request
+  prismaPromise = createPrismaClient();
+} else if (process.env.NODE_ENV === 'production') {
+  // In production Node.js runtime, create a new client with retries
   prismaPromise = createPrismaClient();
 } else {
-  // In development, use global client for hot reloading
+  // In development Node.js runtime, use global client for hot reloading
   if (!globalForPrisma.prisma) {
     prismaPromise = createPrismaClient().then(client => {
       globalForPrisma.prisma = client;

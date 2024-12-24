@@ -1,10 +1,11 @@
 // app/api/health/route.ts
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { getPrismaClient } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 
 async function checkDatabase() {
   try {
+    const prisma = await getPrismaClient();
     const startTime = Date.now();
     const result = await prisma.$queryRaw`SELECT 1 as connected`;
     const duration = Date.now() - startTime;
@@ -26,6 +27,7 @@ async function checkDatabase() {
 
 async function checkUserTable() {
   try {
+    const prisma = await getPrismaClient();
     const count = await prisma.user.count();
     return {
       accessible: true,
