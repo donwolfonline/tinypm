@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getPrismaClient } from '@/lib/prisma';
 import { getAuthSession } from '@/lib/auth';
 import { Filter } from 'bad-words';
-import { Prisma } from '@prisma/client';
+import { Prisma, Theme } from '@prisma/client';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -113,9 +113,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // Update user with new username
     const prisma = await getPrismaClient();
-    
+
     // First check if username is taken
     const existingUser = await prisma.user.findFirst({
       where: {
@@ -136,7 +135,10 @@ export async function POST(req: Request) {
     // Update the user
     const updatedUser = await prisma.user.update({
       where: { email: session.user.email },
-      data: { username },
+      data: { 
+        username,
+        lastLogin: new Date(), // Update last login time
+      },
       select: {
         id: true,
         name: true,
@@ -146,6 +148,8 @@ export async function POST(req: Request) {
         theme: true,
         pageTitle: true,
         pageDesc: true,
+        lastLogin: true,
+        stripeCustomerId: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -156,10 +160,19 @@ export async function POST(req: Request) {
     console.error('Error in username registration:', error);
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      // P2002 is unique constraint violation
       if (error.code === 'P2002') {
         return NextResponse.json(
           { error: 'Username is already taken' },
           { status: 409 }
+        );
+      }
+
+      // P2025 is not found error
+      if (error.code === 'P2025') {
+        return NextResponse.json(
+          { error: 'User not found' },
+          { status: 404 }
         );
       }
     }
