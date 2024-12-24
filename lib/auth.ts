@@ -148,9 +148,6 @@ export const authOptions: AuthOptions = {
     },
     async signOut(message) {
       console.log('SignOut event:', message);
-    },
-    async error(message) {
-      console.error('Auth error event:', message);
     }
   },
   pages: {
