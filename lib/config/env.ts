@@ -1,21 +1,19 @@
 // lib/config/env.ts
 
-const getEnvironmentVariable = (key: string): string => {
+const getEnvironmentVariable = (key: string, required: boolean = true): string => {
   const value = process.env[key];
-  if (!value) {
-    throw new Error(`Missing environment variable: ${key}`);
+  if (!value && required) {
+    throw new Error(`Missing required environment variable: ${key}`);
   }
-  return value;
+  return value || '';
 };
 
 const validateEnvironment = () => {
-  // Validate all required environment variables
+  // Validate auth-related environment variables
   const requiredVars = [
-    'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY',
-    'NEXT_PUBLIC_STRIPE_PREMIUM_MONTHLY_PRICE_ID',
-    'NEXT_PUBLIC_STRIPE_PREMIUM_YEARLY_PRICE_ID',
-    'STRIPE_SECRET_KEY',
-    'STRIPE_WEBHOOK_SECRET'
+    'GOOGLE_CLIENT_ID',
+    'GOOGLE_CLIENT_SECRET',
+    'NEXTAUTH_SECRET'
   ];
 
   const missing = requiredVars.filter(key => !process.env[key]);
@@ -29,11 +27,11 @@ validateEnvironment();
 
 export const env = {
   stripe: {
-    publishableKey: getEnvironmentVariable('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY'),
-    premiumMonthlyPriceId: getEnvironmentVariable('NEXT_PUBLIC_STRIPE_PREMIUM_MONTHLY_PRICE_ID'),
-    premiumYearlyPriceId: getEnvironmentVariable('NEXT_PUBLIC_STRIPE_PREMIUM_YEARLY_PRICE_ID'),
-    secretKey: getEnvironmentVariable('STRIPE_SECRET_KEY'),
-    webhookSecret: getEnvironmentVariable('STRIPE_WEBHOOK_SECRET')
+    publishableKey: getEnvironmentVariable('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY', false),
+    premiumMonthlyPriceId: getEnvironmentVariable('NEXT_PUBLIC_STRIPE_PREMIUM_MONTHLY_PRICE_ID', false),
+    premiumYearlyPriceId: getEnvironmentVariable('NEXT_PUBLIC_STRIPE_PREMIUM_YEARLY_PRICE_ID', false),
+    secretKey: getEnvironmentVariable('STRIPE_SECRET_KEY', false),
+    webhookSecret: getEnvironmentVariable('STRIPE_WEBHOOK_SECRET', false)
   },
   nextPublic: {
     appUrl: process.env.NEXT_PUBLIC_APP_URL || '',
