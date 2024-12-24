@@ -4,19 +4,40 @@ import { getServerSession } from 'next-auth/next';
 import Google from 'next-auth/providers/google';
 import prisma from '@/lib/prisma';
 
-// Check required environment variables
-const requiredEnvVars = {
-  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
-  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
-  NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-  NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
-};
+// Function to validate environment variables
+function validateEnv() {
+  const requiredEnvVars = {
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+  };
 
-Object.entries(requiredEnvVars).forEach(([key, value]) => {
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${key}`);
+  const missingVars = Object.entries(requiredEnvVars)
+    .filter(([_, value]) => !value)
+    .map(([key]) => key);
+
+  if (missingVars.length > 0) {
+    throw new Error(
+      `Missing required environment variables: ${missingVars.join(', ')}`
+    );
   }
-});
+
+  // Set NEXTAUTH_URL if not set
+  if (!process.env.NEXTAUTH_URL) {
+    if (process.env.VERCEL_URL) {
+      process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
+      console.log('Setting NEXTAUTH_URL from VERCEL_URL:', process.env.NEXTAUTH_URL);
+    } else if (process.env.NODE_ENV === 'development') {
+      process.env.NEXTAUTH_URL = 'http://localhost:3000';
+      console.log('Setting NEXTAUTH_URL for development:', process.env.NEXTAUTH_URL);
+    }
+  }
+
+  return true;
+}
+
+// Validate environment variables
+validateEnv();
 
 export const authOptions: AuthOptions = {
   providers: [
