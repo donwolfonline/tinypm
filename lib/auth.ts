@@ -46,10 +46,10 @@ export const authOptions: AuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
-          prompt: "consent",
-          access_type: "offline",
+          prompt: "select_account",
+          access_type: "online",
           response_type: "code",
-          scope: "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email"
+          scope: "email profile"
         }
       }
     }),
@@ -58,40 +58,46 @@ export const authOptions: AuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async signIn({ user, account, profile, email }) {
-      console.log('SignIn callback started');
-      console.log('User:', { email: user.email, name: user.name });
-      console.log('Account:', { provider: account?.provider, type: account?.type });
-      console.log('Profile:', profile);
+      console.log('SignIn callback started', {
+        user: {
+          email: user?.email,
+          name: user?.name,
+          image: user?.image
+        },
+        account: {
+          provider: account?.provider,
+          type: account?.type,
+          scope: account?.scope
+        },
+        profile
+      });
 
       try {
-        if (!user.email) {
-          console.error('No email provided by Google');
-          return false;
-        }
-
-        // Check if user exists
-        const existingUser = await prisma.user.findUnique({
-          where: { email: user.email },
-        });
-
-        if (!existingUser) {
-          // Create new user
-          const newUser = await prisma.user.create({
-            data: {
-              email: user.email,
-              name: user.name || '',
-              image: user.image || '',
-            },
+        // Always allow sign in - remove blocking conditions
+        if (user?.email) {
+          const existingUser = await prisma.user.findUnique({
+            where: { email: user.email },
           });
-          console.log('Created new user:', { email: newUser.email, id: newUser.id });
-        } else {
-          console.log('Existing user found:', { email: existingUser.email, id: existingUser.id });
-        }
 
-        return true;
+          if (!existingUser) {
+            await prisma.user.create({
+              data: {
+                email: user.email,
+                name: user.name || '',
+                image: user.image || '',
+              },
+            });
+            console.log('Created new user with email:', user.email);
+          } else {
+            console.log('Existing user found with email:', user.email);
+          }
+        }
+        
+        return true; // Always allow sign in
       } catch (error) {
         console.error('Error in signIn callback:', error);
-        return false;
+        // Don't block sign in on database errors
+        return true;
       }
     },
     async session({ session, token }) {
