@@ -69,14 +69,7 @@ export const authOptions: AuthOptions = {
           select: { id: true },
         });
 
-        if (existingUser) {
-          console.log('Existing user found:', user.email);
-          // Update last login time
-          await prisma.user.update({
-            where: { email: user.email },
-            data: { lastLogin: new Date() },
-          });
-        } else {
+        if (!existingUser) {
           console.log('Creating new user:', user.email);
           // Create new user
           await prisma.user.create({
@@ -84,9 +77,10 @@ export const authOptions: AuthOptions = {
               email: user.email,
               name: user.name || '',
               image: user.image || null,
-              lastLogin: new Date(),
             },
           });
+        } else {
+          console.log('Existing user found:', user.email);
         }
 
         return true;
@@ -114,7 +108,6 @@ export const authOptions: AuthOptions = {
             image: true,
             username: true,
             createdAt: true,
-            lastLogin: true,
           },
         });
 
@@ -124,7 +117,6 @@ export const authOptions: AuthOptions = {
             id: user.id,
             username: user.username,
             createdAt: user.createdAt,
-            lastLogin: user.lastLogin,
           };
           console.log('Session updated with user data');
         } else {
