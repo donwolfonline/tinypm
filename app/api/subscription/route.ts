@@ -1,12 +1,13 @@
 // app/api/subscription/route.ts
 import { NextResponse } from 'next/server';
 import { getAuthSession } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import { getPrismaClient } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 
 // Helper function to check database connection
 async function checkDatabaseConnection() {
   try {
+    const prisma = await getPrismaClient();
     await prisma.$queryRaw`SELECT 1`;
     return true;
   } catch (error) {
@@ -37,6 +38,7 @@ export async function GET() {
 
     // Find or create user with proper error handling
     try {
+      const prisma = await getPrismaClient();
       const user = await prisma.user.upsert({
         where: { 
           email: session.user.email 

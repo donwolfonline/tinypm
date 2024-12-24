@@ -119,17 +119,29 @@ async function createPrismaClient(): Promise<PrismaClient> {
   throw lastError || new Error('Could not establish database connection');
 }
 
-// Initialize Prisma client
-let prisma: PrismaClient;
+// Initialize Prisma client with retries
+let prismaPromise: Promise<PrismaClient>;
 
 if (process.env.NODE_ENV === 'production') {
-  prisma = new PrismaClient();
+  // In production, create a new client with retries
+  prismaPromise = createPrismaClient();
 } else {
+  // In development, use global client for hot reloading
   if (!globalForPrisma.prisma) {
-    globalForPrisma.prisma = new PrismaClient();
+    prismaPromise = createPrismaClient().then(client => {
+      globalForPrisma.prisma = client;
+      return client;
+    });
+  } else {
+    prismaPromise = Promise.resolve(globalForPrisma.prisma);
   }
-  prisma = globalForPrisma.prisma;
 }
 
-export { prisma };
+// Export a function to get the initialized client
+export async function getPrismaClient(): Promise<PrismaClient> {
+  return prismaPromise;
+}
+
+// For backward compatibility
+export const prisma = await prismaPromise;
 export default prisma;
