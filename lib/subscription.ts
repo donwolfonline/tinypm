@@ -1,5 +1,5 @@
 // lib/subscription.ts
-import { getStripePrice } from './config/client-stripe';
+import { getStripePrice, isStripeConfigured } from './config/client-stripe';
 
 export type SubscriptionInterval = 'month' | 'year';
 export type SubscriptionStatus = 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'EXPIRED';
@@ -35,6 +35,13 @@ function getPriceId(type: 'MONTHLY' | 'YEARLY'): string {
   if (isDev) {
     return DEV_PRICE_IDS[type];
   }
+  
+  // Return empty string if Stripe is not configured
+  if (!isStripeConfigured()) {
+    console.log('Stripe is not configured, using placeholder price ID');
+    return '';
+  }
+  
   return getStripePrice(type === 'MONTHLY' ? 'premiumMonthly' : 'premiumYearly');
 }
 
@@ -54,42 +61,31 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlans = {
     name: 'Premium Yearly',
     priceId: getPriceId('YEARLY'),
     interval: 'year',
-    amount: 35,
+    amount: 39.99,
     features: [
-      'All Premium Monthly features',
-      '2 months free',
+      'Custom domain support',
+      'Priority support',
+      'Remove tiny.pm branding',
+      '2 months free'
     ]
   }
-} as const;
+};
 
-/**
- * Development helpers and mocks
- * Only available in development environment
- */
+// Development helpers
 export const DEV_HELPERS = {
-  mockSubscription: isDev ? {
-    id: 'mock_sub_id',
-    status: 'ACTIVE' as const,
-    stripeSubscriptionId: 'mock_stripe_sub_id',
-    currentPeriodStart: new Date(),
-    currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-    cancelAtPeriodEnd: false,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    userId: 'mock_user_id'
-  } : null,
+  isDevelopment: process.env.NODE_ENV === 'development',
   
-  isDevelopment: isDev,
-
   /**
    * Helper to calculate subscription periods
    * Useful for testing different subscription states
    */
   getTestPeriod(daysFromNow: number) {
     const now = new Date();
+    const future = new Date();
+    future.setDate(now.getDate() + daysFromNow);
     return {
-      start: now,
-      end: new Date(now.getTime() + daysFromNow * 24 * 60 * 60 * 1000)
+      start: now.toISOString(),
+      end: future.toISOString()
     };
   },
 
@@ -99,14 +95,14 @@ export const DEV_HELPERS = {
    * @param daysRemaining Days until subscription ends
    */
   getMockSubscription(status: 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'EXPIRED', daysRemaining = 30) {
-    if (!isDev) return null;
-    
-    const period = this.getTestPeriod(daysRemaining);
+    const { start, end } = this.getTestPeriod(daysRemaining);
     return {
-      ...this.mockSubscription,
+      id: 'mock_sub_id',
       status,
-      currentPeriodStart: period.start,
-      currentPeriodEnd: period.end
+      priceId: DEV_PRICE_IDS.MONTHLY,
+      currentPeriodStart: start,
+      currentPeriodEnd: end,
+      cancelAtPeriodEnd: status === 'CANCELED'
     };
   }
 };
@@ -114,13 +110,13 @@ export const DEV_HELPERS = {
 /**
  * Utility functions for subscription management
  */
-export const subscriptionUtils = {
+export const SUBSCRIPTION_UTILS = {
   /**
    * Calculate savings between monthly and yearly plans
    */
   calculateYearlySavings(): number {
-    const monthlyAnnualCost = SUBSCRIPTION_PLANS.MONTHLY.amount * 12;
-    return monthlyAnnualCost - SUBSCRIPTION_PLANS.YEARLY.amount;
+    const monthlyTotal = SUBSCRIPTION_PLANS.MONTHLY.amount * 12;
+    return monthlyTotal - SUBSCRIPTION_PLANS.YEARLY.amount;
   },
 
   /**
@@ -136,15 +132,17 @@ export const subscriptionUtils = {
   formatPrice(amount: number): string {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'USD',
+      minimumFractionDigits: 2
     }).format(amount);
   }
 };
 
-// Type guard for subscription status
+/**
+ * Type guard for subscription status
+ */
 export function isValidSubscriptionStatus(
   status: unknown
 ): status is 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'EXPIRED' {
-  return typeof status === 'string' && 
-    ['ACTIVE', 'PAST_DUE', 'CANCELED', 'EXPIRED'].includes(status);
+  return typeof status === 'string' && ['ACTIVE', 'PAST_DUE', 'CANCELED', 'EXPIRED'].includes(status);
 }
