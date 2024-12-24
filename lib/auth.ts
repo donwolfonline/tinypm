@@ -8,13 +8,21 @@ export const authOptions: AuthOptions = {
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          prompt: "select_account"
+        }
+      }
     }),
   ],
+  debug: process.env.NODE_ENV === 'development',
   callbacks: {
-    async signIn({ user }) {
-      //console.log('SignIn callback - user:', user);
+    async signIn({ user, account, profile }) {
+      console.log('SignIn callback - user:', { email: user.email, name: user.name });
+      console.log('SignIn callback - account:', { provider: account?.provider, type: account?.type });
+
       if (!user.email) {
-        console.log('No email provided');
+        console.error('No email provided in sign in callback');
         return false;
       }
 
@@ -23,8 +31,6 @@ export const authOptions: AuthOptions = {
         const existingUser = await prisma.user.findUnique({
           where: { email: user.email },
         });
-
-        //console.log('Existing user exists.');
 
         if (!existingUser) {
           // Create new user
@@ -35,7 +41,9 @@ export const authOptions: AuthOptions = {
               image: user.image || '',
             },
           });
-          console.log('Created new user:', newUser);
+          console.log('Created new user:', { email: newUser.email, id: newUser.id });
+        } else {
+          console.log('Existing user found:', { email: existingUser.email, id: existingUser.id });
         }
 
         return true;
@@ -44,31 +52,27 @@ export const authOptions: AuthOptions = {
         return false;
       }
     },
-    async session({ session }) {
-      //console.log('Session callback - token:', token);
+    async session({ session, token }) {
       if (session.user?.email) {
         try {
-          // Always fetch fresh user data from database
-          const dbUser = await prisma.user.findUnique({
+          const user = await prisma.user.findUnique({
             where: { email: session.user.email },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              image: true,
+              username: true,
+              createdAt: true,
+            },
           });
 
-          //console.log('Session callback - dbUser:', dbUser);
-
-          if (dbUser) {
-            // Return fresh user data
-            return {
-              ...session,
-              user: {
-                ...session.user,
-                id: dbUser.id,
-                name: dbUser.name,
-                username: dbUser.username,
-                image: dbUser.image,
-                pageTitle: dbUser.pageTitle,
-                pageDesc: dbUser.pageDesc,
-                theme: dbUser.theme,
-              },
+          if (user) {
+            session.user = {
+              ...session.user,
+              id: user.id,
+              username: user.username,
+              createdAt: user.createdAt,
             };
           }
         } catch (error) {
@@ -78,7 +82,6 @@ export const authOptions: AuthOptions = {
       return session;
     },
     async jwt({ token, user }) {
-      //console.log('JWT callback - token:', token, 'user:', user);
       if (user) {
         token.id = user.id;
       }
@@ -87,15 +90,18 @@ export const authOptions: AuthOptions = {
   },
   pages: {
     signIn: '/login',
-    error: '/error',
+    error: '/login',  // Redirect to login page with error
+    signOut: '/login',
   },
-  debug: true,
+  session: {
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
 };
 
 // Helper function to get server session
 import { getServerSession } from 'next-auth/next';
 
 export async function getAuthSession() {
-  const session = await getServerSession(authOptions);
-  return session;
+  return await getServerSession(authOptions);
 }
