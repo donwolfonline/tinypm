@@ -6,6 +6,11 @@ import prisma from '@/lib/prisma';
 
 // Function to validate environment variables
 function validateEnv() {
+  // Only validate on server side
+  if (typeof window !== 'undefined') {
+    return true;
+  }
+
   const requiredEnvVars = {
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
@@ -17,33 +22,21 @@ function validateEnv() {
     .map(([key]) => key);
 
   if (missingVars.length > 0) {
-    throw new Error(
-      `Missing required environment variables: ${missingVars.join(', ')}`
-    );
-  }
-
-  // Set NEXTAUTH_URL if not set
-  if (!process.env.NEXTAUTH_URL) {
-    if (process.env.VERCEL_URL) {
-      process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
-      console.log('Setting NEXTAUTH_URL from VERCEL_URL:', process.env.NEXTAUTH_URL);
-    } else if (process.env.NODE_ENV === 'development') {
-      process.env.NEXTAUTH_URL = 'http://localhost:3000';
-      console.log('Setting NEXTAUTH_URL for development:', process.env.NEXTAUTH_URL);
-    }
+    console.error('Missing environment variables:', missingVars);
+    return false;
   }
 
   return true;
 }
 
 // Validate environment variables
-validateEnv();
+const isValid = validateEnv();
 
 export const authOptions: AuthOptions = {
   providers: [
     Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
       authorization: {
         params: {
           prompt: "select_account",
