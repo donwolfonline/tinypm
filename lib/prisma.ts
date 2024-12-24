@@ -122,28 +122,12 @@ async function createPrismaClient(): Promise<PrismaClient> {
 // Initialize Prisma client
 let prisma: PrismaClient;
 
-if (!globalForPrisma.prisma) {
-  console.log('Creating new Prisma client instance...');
-  createPrismaClient()
-    .then(client => {
-      console.log('Prisma client initialized successfully');
-      prisma = client;
-      if (process.env.NODE_ENV !== 'production') {
-        globalForPrisma.prisma = client;
-      }
-    })
-    .catch(error => {
-      console.error('Fatal: Failed to initialize Prisma client:', {
-        error: error instanceof Error ? {
-          name: error.name,
-          message: error.message,
-          stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-        } : 'Unknown error',
-      });
-      process.exit(1);
-    });
+if (process.env.NODE_ENV === 'production') {
+  prisma = new PrismaClient();
 } else {
-  console.log('Using existing Prisma client instance');
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = new PrismaClient();
+  }
   prisma = globalForPrisma.prisma;
 }
 
