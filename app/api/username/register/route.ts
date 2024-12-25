@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getPrismaClient } from '@/lib/prisma';
 import { getAuthSession } from '@/lib/auth';
 import { Filter } from 'bad-words';
-import { Prisma, Theme } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -123,7 +123,6 @@ export async function POST(req: Request) {
       where: { email: session.user.email },
       select: {
         id: true,
-        email: true,
         username: true,
       },
     });
@@ -145,6 +144,9 @@ export async function POST(req: Request) {
         NOT: {
           id: user.id, // Exclude current user
         },
+      },
+      select: {
+        id: true,
       },
     });
 
