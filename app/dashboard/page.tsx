@@ -11,7 +11,6 @@ import debounce from 'lodash/debounce';
 import { Theme, Content, Subscription } from '@/types';
 import { themes, getThemeStyles } from '@/lib/themes';
 
-
 // Import our new components
 import { PreviewBanner } from '../components/dashboard/PreviewBanner';
 import { SettingsPanel } from '../components/dashboard/SettingsPanel';
@@ -115,31 +114,42 @@ export default function DashboardPage() {
   // Handle link operations
   const addNewContent = async (type: 'LINK' | 'TITLE' | 'DIVIDER' | 'TEXT') => {
     try {
+      // Prepare content data based on type
+      const contentData = {
+        type,
+        enabled: true,
+        order: content.length,
+        // Add required fields based on type
+        title: type === 'LINK' || type === 'TITLE' ? 'New Title' : null,
+        url: type === 'LINK' ? 'https://' : null,
+        text: type === 'TEXT' ? 'New Text' : null,
+        emoji: type === 'LINK' ? '🔗' : type === 'TITLE' ? '📌' : type === 'TEXT' ? '📝' : '➖',
+      };
+
       const response = await fetch('/api/content', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
-        body: JSON.stringify({
-          type,
-          enabled: true,
-          order: content.length,
-          // Add default values based on type
-          ...(type === 'LINK' && { title: '', url: '' }),
-          ...(type === 'TITLE' && { title: '' }),
-          ...(type === 'TEXT' && { text: '' }),
-        }),
+        body: JSON.stringify(contentData),
       });
 
-      if (!response.ok) throw new Error(`Failed to add content: ${response.statusText}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add content');
+      }
 
       const newContent = await response.json();
-      handleContentChange([...content, newContent]);
+      if (newContent.content) {
+        handleContentChange([...content, newContent.content]);
+      } else {
+        throw new Error('Invalid response format');
+      }
     } catch (error) {
       console.error('Error adding new content:', error);
       setSaveStatus('error');
-      setErrorMessage('Failed to add new content');
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to add new content');
     }
   };
 
@@ -162,13 +172,7 @@ export default function DashboardPage() {
   };
 
   const handleSessionUpdate = async () => {
-    // const response = await fetch('/api/user');
-    // const userData = await response.json();
-
-    // console.log('Latest user data:', userData);
-
     const updated = await updateSession();
-    //console.log('Session updated:', updated);
     return updated;
   };
 
@@ -319,37 +323,37 @@ export default function DashboardPage() {
           <PreviewBanner username={session?.user?.username} theme={currentTheme} />
 
           {/* Content Section */}
-        <div className={`mb-4 rounded-xl border-2 ${themeConfig.buttonBorder} bg-white p-6 shadow-lg`}>
-          <h2 className={`mb-6 text-xl font-bold ${themeConfig.buttonText}`}>Your Content</h2>
+          <div className={`mb-4 rounded-xl border-2 ${themeConfig.buttonBorder} bg-white p-6 shadow-lg`}>
+            <h2 className={`mb-6 text-xl font-bold ${themeConfig.buttonText}`}>Your Content</h2>
 
-          <DragDropContext onDragEnd={onDragEnd}>
-            <Droppable droppableId="content">
-              {provided => (
-                <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
-                  {content.map((item, index) => (
-                    <Draggable key={item.id} draggableId={item.id} index={index}>
-                      {(provided, snapshot) => (
-                        <ContentItem
-                          content={item}
-                          dragHandleProps={provided.dragHandleProps}
-                          draggableProps={provided.draggableProps}
-                          isDragging={snapshot.isDragging}
-                          onUpdate={updateContent}
-                          onDelete={deleteContent}
-                          forwardedRef={provided.innerRef}
-                        />
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          </DragDropContext>
+            <DragDropContext onDragEnd={onDragEnd}>
+              <Droppable droppableId="content">
+                {provided => (
+                  <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
+                    {content.map((item, index) => (
+                      <Draggable key={item.id} draggableId={item.id} index={index}>
+                        {(provided, snapshot) => (
+                          <ContentItem
+                            content={item}
+                            dragHandleProps={provided.dragHandleProps}
+                            draggableProps={provided.draggableProps}
+                            isDragging={snapshot.isDragging}
+                            onUpdate={updateContent}
+                            onDelete={deleteContent}
+                            forwardedRef={provided.innerRef}
+                          />
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
 
-          {/* Add Content Menu */}
-          <AddContentMenu onAdd={addNewContent} />
-        </div>
+            {/* Add Content Menu */}
+            <AddContentMenu onAdd={addNewContent} />
+          </div>
         </main>
 
         {/* Settings Panel */}
