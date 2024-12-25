@@ -2,11 +2,52 @@
 import { NextResponse } from 'next/server';
 import { getPrismaClient } from '@/lib/prisma';
 import { getAuthSession } from '@/lib/auth';
-import { ContentType } from '@prisma/client';
+import { ContentType, Prisma } from '@prisma/client';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+// Validate content data
+function validateContent(data: any): { isValid: boolean; error?: string } {
+  if (!data) {
+    return { isValid: false, error: 'Content data is required' };
+  }
+
+  const { type = 'LINK', title, url, text } = data;
+
+  // Validate type
+  if (!Object.values(ContentType).includes(type)) {
+    return { isValid: false, error: 'Invalid content type' };
+  }
+
+  // Validate based on type
+  switch (type) {
+    case 'LINK':
+      if (!url) {
+        return { isValid: false, error: 'URL is required for link content' };
+      }
+      if (!title) {
+        return { isValid: false, error: 'Title is required for link content' };
+      }
+      break;
+    case 'TITLE':
+      if (!title) {
+        return { isValid: false, error: 'Title is required for title content' };
+      }
+      break;
+    case 'TEXT':
+      if (!text) {
+        return { isValid: false, error: 'Text is required for text content' };
+      }
+      break;
+    case 'DIVIDER':
+      // No validation needed
+      break;
+  }
+
+  return { isValid: true };
+}
 
 export async function GET(req: Request) {
   try {
@@ -66,14 +107,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const { type = 'LINK', title, url, text, emoji } = body;
-
-    if (type === 'LINK' && !url) {
+    // Validate content data
+    const validation = validateContent(body);
+    if (!validation.isValid) {
       return NextResponse.json(
-        { error: 'URL is required for link content' },
+        { error: validation.error },
         { status: 400 }
       );
     }
+
+    const { type = 'LINK', title, url, text, emoji } = body;
 
     const prisma = await getPrismaClient();
     const user = await prisma.user.findUnique({
@@ -101,10 +144,11 @@ export async function POST(req: Request) {
     const content = await prisma.content.create({
       data: {
         type: type as ContentType,
-        title,
-        url,
-        text,
-        emoji,
+        title: title || null,
+        url: url || null,
+        text: text || null,
+        emoji: emoji || null,
+        enabled: true,
         order: newOrder,
         userId: user.id,
       },
@@ -113,6 +157,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ content });
   } catch (error) {
     console.error('Error creating content:', error);
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      return NextResponse.json(
+        { error: 'Database error: ' + error.message },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to create content' },
       { status: 500 }
@@ -145,6 +197,15 @@ export async function PUT(req: Request) {
     if (!id) {
       return NextResponse.json(
         { error: 'Content ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate content data
+    const validation = validateContent({ type, title, url, text });
+    if (!validation.isValid) {
+      return NextResponse.json(
+        { error: validation.error },
         { status: 400 }
       );
     }
@@ -182,12 +243,12 @@ export async function PUT(req: Request) {
       where: { id },
       data: {
         type: type as ContentType,
-        title,
-        url,
-        text,
-        emoji,
-        enabled,
-        order,
+        title: title || null,
+        url: url || null,
+        text: text || null,
+        emoji: emoji || null,
+        enabled: enabled ?? true,
+        order: order ?? existingContent.order,
       },
     });
 
