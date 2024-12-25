@@ -15,14 +15,33 @@ const ALLOWED_DOMAINS = [
   'avatars.githubusercontent.com',
 ];
 
+const DEBUG_MODE = true;
+
+const debugLog = (...args: any[]) => {
+  if (DEBUG_MODE) {
+    console.log('[PROXY-IMAGE DEBUG]', ...args);
+  }
+};
+
 const isValidUrl = (urlString: string): boolean => {
   try {
     const url = new URL(urlString);
-    // More flexible domain matching
-    return ALLOWED_DOMAINS.some(domain => 
-      url.hostname === domain || url.hostname.endsWith('.' + domain)
+    debugLog('URL Validation:', {
+      hostname: url.hostname,
+      protocol: url.protocol,
+      fullUrl: urlString
+    });
+
+    const isValid = ALLOWED_DOMAINS.some(domain => 
+      url.hostname === domain || 
+      url.hostname.endsWith('.' + domain) ||
+      url.hostname.includes(domain)
     ) && (url.protocol === 'http:' || url.protocol === 'https:');
-  } catch {
+
+    debugLog('URL Validation Result:', isValid);
+    return isValid;
+  } catch (error) {
+    debugLog('URL Validation Error:', error);
     return false;
   }
 };
@@ -32,7 +51,10 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const imageUrl = searchParams.get('url');
 
+    debugLog('Received Image URL:', imageUrl);
+
     if (!imageUrl) {
+      debugLog('Missing URL parameter');
       return new NextResponse(JSON.stringify({ 
         error: 'Missing URL parameter',
         details: 'No URL was provided in the request' 
@@ -42,13 +64,23 @@ export async function GET(request: Request) {
       });
     }
 
-    // Decode the URL to handle encoded characters
+    // Special handling for Google favicon URLs
     const decodedUrl = decodeURIComponent(imageUrl);
+    debugLog('Decoded URL:', decodedUrl);
 
-    if (!isValidUrl(decodedUrl)) {
+    // Extract the actual URL from Google's favicon service
+    const googleFaviconMatch = decodedUrl.match(/url=([^&]+)/);
+    const extractedUrl = googleFaviconMatch 
+      ? decodeURIComponent(googleFaviconMatch[1]) 
+      : decodedUrl;
+
+    debugLog('Extracted URL:', extractedUrl);
+
+    if (!isValidUrl(extractedUrl)) {
+      debugLog('Invalid URL', extractedUrl);
       return new NextResponse(JSON.stringify({ 
         error: 'Invalid or disallowed URL',
-        details: `URL ${decodedUrl} is not allowed`,
+        details: `URL ${extractedUrl} is not allowed`,
         allowedDomains: ALLOWED_DOMAINS
       }), { 
         status: 400,
@@ -56,7 +88,7 @@ export async function GET(request: Request) {
       });
     }
 
-    const imageResponse = await fetch(decodedUrl, {
+    const imageResponse = await fetch(extractedUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; TinyPM/1.0)',
         'Accept': 'image/*',
@@ -65,7 +97,17 @@ export async function GET(request: Request) {
       signal: AbortSignal.timeout(5000)
     });
 
+    debugLog('Fetch Response:', {
+      status: imageResponse.status,
+      statusText: imageResponse.statusText,
+      headers: Object.fromEntries(imageResponse.headers)
+    });
+
     if (!imageResponse.ok) {
+      debugLog('Fetch Failed', {
+        status: imageResponse.status,
+        statusText: imageResponse.statusText
+      });
       return new NextResponse(JSON.stringify({ 
         error: 'Failed to fetch image',
         details: `HTTP ${imageResponse.status}: ${imageResponse.statusText}` 
@@ -76,7 +118,10 @@ export async function GET(request: Request) {
     }
 
     const contentType = imageResponse.headers.get('content-type');
+    debugLog('Content Type:', contentType);
+
     if (!contentType?.startsWith('image/')) {
+      debugLog('Invalid Content Type', contentType);
       return new NextResponse(JSON.stringify({ 
         error: 'Invalid content type',
         details: `Received content type: ${contentType}` 
@@ -87,23 +132,25 @@ export async function GET(request: Request) {
     }
 
     const imageBuffer = await imageResponse.arrayBuffer();
+    debugLog('Image Buffer Length:', imageBuffer.byteLength);
 
     return new NextResponse(imageBuffer, {
       headers: {
         'Content-Type': contentType,
         'Cache-Control': 'public, max-age=31536000, immutable',
         'X-Content-Type-Options': 'nosniff',
+        'X-Debug-URL': extractedUrl  // Add debug header
       },
     });
   } catch (error) {
-    console.error('Proxy image error:', error);
+    debugLog('Catch Block Error:', error);
     
-    // More detailed error logging
     if (error instanceof Error) {
       return new NextResponse(JSON.stringify({ 
         error: 'Failed to proxy image',
         details: error.message,
-        name: error.name
+        name: error.name,
+        stack: error.stack
       }), { 
         status: 500,
         headers: { 'Content-Type': 'application/json' }
