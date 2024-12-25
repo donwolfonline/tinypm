@@ -1,20 +1,30 @@
 // app/api/content/[id]/route.ts
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { getPrismaClient } from '@/lib/prisma';
 import { getAuthSession } from '@/lib/auth';
 import { revalidateTag } from 'next/cache';
+import { ContentType, Prisma } from '@prisma/client';
 
 export async function PATCH(request: Request) {
   try {
     const session = await getAuthSession();
-
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const id = request.url.split('/').pop();
-    const data = await request.json();
+    if (!id) {
+      return NextResponse.json({ error: 'Content ID is required' }, { status: 400 });
+    }
 
+    let data;
+    try {
+      data = await request.json();
+    } catch (e) {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
+    const prisma = await getPrismaClient();
     const content = await prisma.content.findFirst({
       where: {
         id,
@@ -31,18 +41,16 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Content not found' }, { status: 404 });
     }
 
-    // Remove undefined values to avoid Prisma errors
-    const updateData = Object.fromEntries(
-      Object.entries({
-        title: data.title,
-        url: data.url,
-        text: data.text,
-        emoji: data.emoji,
-        enabled: data.enabled,
-        order: data.order,
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      }).filter(([_, v]) => v !== undefined)
-    );
+    // Prepare update data with proper null handling
+    const updateData = {
+      title: data.title ?? null,
+      url: data.url ?? null,
+      text: data.text ?? null,
+      emoji: data.emoji ?? null,
+      enabled: data.enabled ?? true,
+      order: data.order ?? content.order,
+      type: data.type ? (data.type as ContentType) : content.type,
+    };
 
     const updatedContent = await prisma.content.update({
       where: { id },
@@ -50,25 +58,41 @@ export async function PATCH(request: Request) {
     });
 
     // Revalidate the user's profile page cache
-    revalidateTag(`user-${content.user.username}`);
+    if (content.user.username) {
+      revalidateTag(`user-${content.user.username}`);
+    }
 
-    return NextResponse.json(updatedContent);
+    return NextResponse.json({ content: updatedContent });
   } catch (error) {
     console.error('Error updating content:', error);
-    return NextResponse.json({ error: 'Failed to update content' }, { status: 500 });
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      return NextResponse.json(
+        { error: 'Database error: ' + error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Failed to update content' },
+      { status: 500 }
+    );
   }
 }
 
 export async function DELETE(request: Request) {
   try {
     const session = await getAuthSession();
-
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const id = request.url.split('/').pop();
+    if (!id) {
+      return NextResponse.json({ error: 'Content ID is required' }, { status: 400 });
+    }
 
+    const prisma = await getPrismaClient();
     const content = await prisma.content.findFirst({
       where: {
         id,
@@ -90,11 +114,24 @@ export async function DELETE(request: Request) {
     });
 
     // Revalidate the user's profile page cache
-    revalidateTag(`user-${content.user.username}`);
+    if (content.user.username) {
+      revalidateTag(`user-${content.user.username}`);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting content:', error);
-    return NextResponse.json({ error: 'Failed to delete content' }, { status: 500 });
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      return NextResponse.json(
+        { error: 'Database error: ' + error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Failed to delete content' },
+      { status: 500 }
+    );
   }
 }
