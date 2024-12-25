@@ -1,30 +1,60 @@
 // app/api/proxy-image/route.ts
 import { NextResponse } from 'next/server';
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const imageUrl = searchParams.get('url');
+export const runtime = 'edge';
+export const dynamic = 'force-dynamic';
 
-  if (!imageUrl) {
-    return new NextResponse('Missing image URL', { status: 400 });
-  }
+const ALLOWED_DOMAINS = [
+  'gstatic.com',
+  't2.gstatic.com',
+  't3.gstatic.com',
+  'www.google.com',
+  'google.com',
+  'githubusercontent.com',
+  'github.com',
+  'avatars.githubusercontent.com',
+];
 
+const isValidUrl = (urlString: string): boolean => {
   try {
-    const response = await fetch(imageUrl);
+    const url = new URL(urlString);
+    return ALLOWED_DOMAINS.some(domain => url.hostname.endsWith(domain));
+  } catch {
+    return false;
+  }
+};
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch image');
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const imageUrl = searchParams.get('url');
+
+    if (!imageUrl) {
+      return new NextResponse('Missing URL parameter', { status: 400 });
     }
 
-    const contentType = response.headers.get('content-type');
+    if (!isValidUrl(imageUrl)) {
+      return new NextResponse('Invalid or disallowed URL', { status: 400 });
+    }
 
+    const imageResponse = await fetch(imageUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; TinyPM/1.0)',
+      },
+    });
+
+    if (!imageResponse.ok) {
+      throw new Error(`Failed to fetch image: ${imageResponse.statusText}`);
+    }
+
+    const contentType = imageResponse.headers.get('content-type');
     if (!contentType?.startsWith('image/')) {
-      return new NextResponse('Invalid image type', { status: 400 });
+      return new NextResponse('Invalid content type', { status: 400 });
     }
 
-    const buffer = await response.arrayBuffer();
+    const imageBuffer = await imageResponse.arrayBuffer();
 
-    return new NextResponse(buffer, {
+    return new NextResponse(imageBuffer, {
       headers: {
         'Content-Type': contentType,
         'Cache-Control': 'public, max-age=31536000, immutable',
@@ -32,6 +62,9 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error('Proxy image error:', error);
-    return new NextResponse('Failed to fetch image', { status: 500 });
+    return new NextResponse(
+      'Failed to proxy image',
+      { status: 500 }
+    );
   }
 }
