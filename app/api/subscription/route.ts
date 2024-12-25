@@ -13,7 +13,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-11-20.acacia',
 });
 
-export async function GET() {
+// Set a reasonable timeout for subscription operations
+const SUBSCRIPTION_TIMEOUT = 10000; // 10 seconds
+
+export async function GET(req: Request) {
   try {
     const session = await getAuthSession();
     if (!session?.user?.email) {
@@ -21,12 +24,29 @@ export async function GET() {
     }
 
     const prisma = await getPrismaClient();
-    const user = await prisma.user.findUnique({
+    
+    // Use Promise.race to implement timeout
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Subscription query timed out')), SUBSCRIPTION_TIMEOUT);
+    });
+
+    const subscriptionPromise = prisma.user.findUnique({
       where: { email: session.user.email },
-      include: {
-        subscription: true,
+      select: {
+        id: true,
+        stripeCustomerId: true,
+        subscription: {
+          select: {
+            id: true,
+            status: true,
+            currentPeriodEnd: true,
+            cancelAtPeriodEnd: true,
+          },
+        },
       },
     });
+
+    const user = await Promise.race([subscriptionPromise, timeoutPromise]) as any;
 
     if (!user) {
       return NextResponse.json(
@@ -64,6 +84,14 @@ export async function GET() {
     return NextResponse.json({ subscription });
   } catch (error) {
     console.error('Error in subscription API:', error);
+    
+    if (error.message === 'Subscription query timed out') {
+      return NextResponse.json(
+        { error: 'Subscription service temporarily unavailable' },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
