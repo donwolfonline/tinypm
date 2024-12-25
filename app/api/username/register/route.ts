@@ -121,6 +121,11 @@ export async function POST(req: Request) {
     // First check if the user exists
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+      },
     });
 
     if (!user) {
@@ -152,11 +157,8 @@ export async function POST(req: Request) {
 
     // Update the user
     const updatedUser = await prisma.user.update({
-      where: { id: user.id }, // Use ID instead of email
-      data: { 
-        username,
-        lastLogin: new Date(),
-      },
+      where: { id: user.id },
+      data: { username },
       select: {
         id: true,
         name: true,
@@ -166,7 +168,6 @@ export async function POST(req: Request) {
         theme: true,
         pageTitle: true,
         pageDesc: true,
-        lastLogin: true,
         stripeCustomerId: true,
         createdAt: true,
         updatedAt: true,

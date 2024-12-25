@@ -112,6 +112,7 @@ model User {
   pageTitle          String?
   pageDesc           String?
   lastLogin          DateTime?      // Track last login time
+  lastActivity       DateTime?      // Track last activity time
   
   // Stripe-related fields
   stripeCustomerId   String?        @unique  // Stripe customer ID
